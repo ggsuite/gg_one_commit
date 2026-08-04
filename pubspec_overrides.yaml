@@ -1,0 +1,5 @@
+dependency_overrides:
+  gg_one_state:
+    path: ../gg_one_state
+  gg_one_checks:
+    path: ../gg_one_checks
