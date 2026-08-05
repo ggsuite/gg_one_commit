@@ -5,6 +5,7 @@
 ### Added
 
 - Daily repo flows of the gg_one tool family, extracted from gg_one: the commit, push, dependency upgrade and ticket flows with their `can_*`/`did_*` counterparts, plus the ocean folder guard and the repository url helper.
+- Add the missing example to each new package
 
 ### Changed
 
