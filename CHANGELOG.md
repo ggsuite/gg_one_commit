@@ -4,9 +4,8 @@
 
 ### Added
 
-- Initial boilerplate.
+- Daily repo flows of the gg_one tool family, extracted from gg_one: the commit, push, dependency upgrade and ticket flows with their `can_*`/`did_*` counterparts, plus the ocean folder guard and the repository url helper.
 
 ### Changed
 
-- Reduce gg_one to the umbrella CLI; distribute behavior docs into the sub-packages
-- Merge gg_one_state, gg_one_checks and gg_one_publish_config into the new gg_one_core package
+- Rewrite the changelogs of the new packages for their initial release
