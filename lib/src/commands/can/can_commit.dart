@@ -4,14 +4,13 @@
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
 
-import 'package:gg_one_state/gg_one_state.dart';
+import 'package:gg_one_core/gg_one_core.dart';
 import 'dart:io';
 
 import 'package:gg_args/gg_args.dart';
 import 'package:gg_log/gg_log.dart';
 import 'package:matcher/expect.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:gg_one_checks/gg_one_checks.dart';
 
 /// Are the last changes ready for »git commit«?
 class CanCommit extends CommandCluster {

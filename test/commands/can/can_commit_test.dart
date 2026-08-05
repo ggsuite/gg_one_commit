@@ -13,7 +13,7 @@ import 'package:gg_status_printer/gg_status_printer.dart';
 import 'package:gg_test/gg_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
-import 'package:gg_one_checks/gg_one_checks.dart';
+import 'package:gg_one_core/gg_one_core.dart';
 
 // .............................................................................
 void main() {
