@@ -1,7 +1,12 @@
 # Changelog
 
-## Unreleased
+## 1.0.1 - 2026-08-05
 
 ### Added
 
-- Initial boilerplate.
+- Daily repo flows of the gg_one tool family, extracted from gg_one: the commit, push, dependency upgrade and ticket flows with their `can_*`/`did_*` counterparts, plus the ocean folder guard and the repository url helper.
+- Add the missing example to each new package
+
+### Changed
+
+- Split gg_one into gg_one_core, gg_one_commit, gg_one_merge and gg_one_do_publish
