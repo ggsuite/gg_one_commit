@@ -79,6 +79,66 @@ void main() {
   }
 
   // ...........................................................................
+  /// Turns the repo into one with a node side. [lockFile] selects the package
+  /// manager (null ⇒ npm).
+  void writePackageJson({
+    String? lockFile = 'pnpm-lock.yaml',
+    Map<String, String> devDependencies = const {},
+  }) {
+    final deps = devDependencies.entries
+        .map((e) => '"${e.key}": "${e.value}"')
+        .join(', ');
+    File('${d.path}/package.json').writeAsStringSync(
+      '{"name": "@org/test", "version": "1.0.0", '
+      '"devDependencies": {$deps}}',
+    );
+    if (lockFile != null) {
+      File('${d.path}/$lockFile').writeAsStringSync('');
+    }
+  }
+
+  // ...........................................................................
+  void mockNodeUpgrade({
+    bool majorVersions = true,
+    String executable = 'pnpm',
+    List<String>? args,
+    int exitCode = 0,
+    String stderr = '',
+    void Function()? onRun,
+  }) {
+    when(
+      () => processWrapper.run(
+        executable,
+        args ?? ['update', if (majorVersions) '--latest'],
+        workingDirectory: d.path,
+        runInShell: true,
+        environment: any(named: 'environment'),
+      ),
+    ).thenAnswer((_) async {
+      onRun?.call();
+      return ProcessResult(0, exitCode, '', stderr);
+    });
+  }
+
+  // ...........................................................................
+  void mockPin({
+    String executable = 'pnpm',
+    List<String>? args,
+    int exitCode = 0,
+    String stderr = '',
+  }) {
+    when(
+      () => processWrapper.run(
+        executable,
+        args ?? ['update', '--save-exact', 'typescript@6'],
+        workingDirectory: d.path,
+        runInShell: true,
+        environment: any(named: 'environment'),
+      ),
+    ).thenAnswer((_) async => ProcessResult(0, exitCode, '', stderr));
+  }
+
+  // ...........................................................................
   void initDefaultMocks() {
     canUpgrade.mockExec(result: null, directory: d, ggLog: ggLog);
     mockDartPubUpgrade();
@@ -201,11 +261,14 @@ void main() {
           });
         });
 
-        group('- when there is no pubspec.yaml', () {
+        group('- when there is no manifest at all', () {
           test('- programmatically', () async {
             File('${d.path}/pubspec.yaml').deleteSync();
             await doUpgrade.exec(directory: d, ggLog: ggLog);
-            expect(messages.last, 'No pubspec.yaml — nothing to upgrade.');
+            expect(
+              messages.last,
+              'No pubspec.yaml and no package.json — nothing to upgrade.',
+            );
             verifyNever(
               () => processWrapper.run(
                 any(),
@@ -214,6 +277,219 @@ void main() {
               ),
             );
           });
+        });
+      });
+
+      // .....................................................................
+      group('- the node side', () {
+        test('is upgraded for a pure TypeScript repo', () async {
+          // Before, such a repo returned early and was never upgraded.
+          File('${d.path}/pubspec.yaml').deleteSync();
+          writePackageJson();
+          mockNodeUpgrade();
+
+          await doUpgrade.exec(directory: d, ggLog: ggLog);
+
+          expect(messages.join('\n'), contains('✓ Run »pnpm update --latest«'));
+          verifyNever(
+            () => processWrapper.run(
+              'dart',
+              any(),
+              workingDirectory: any(named: 'workingDirectory'),
+            ),
+          );
+        });
+
+        test('and the dart side both run for a hybrid', () async {
+          // The whole point: a hybrid has two ecosystems, so both move.
+          writePackageJson();
+          mockNodeUpgrade();
+
+          await doUpgrade.exec(directory: d, ggLog: ggLog);
+
+          final all = messages.join('\n');
+          expect(
+            all,
+            contains('✓ Run »dart pub upgrade --major-versions --tighten«'),
+          );
+          expect(all, contains('✓ Run »pnpm update --latest«'));
+          // Dart first: a hybrid's npm lifecycle scripts may shell into it.
+          expect(
+            all.indexOf('dart pub upgrade'),
+            lessThan(all.indexOf('pnpm update')),
+          );
+        });
+
+        test('drops --latest with --no-major-versions', () async {
+          writePackageJson();
+          mockNodeUpgrade(majorVersions: false);
+          mockDartPubUpgrade(majorVersions: false);
+
+          await doUpgrade.exec(
+            directory: d,
+            ggLog: ggLog,
+            majorVersions: false,
+          );
+
+          expect(messages.join('\n'), contains('✓ Run »pnpm update«'));
+        });
+
+        test('uses yarn when a yarn.lock is present', () async {
+          writePackageJson(lockFile: 'yarn.lock');
+          mockNodeUpgrade(executable: 'yarn', args: ['upgrade', '--latest']);
+
+          await doUpgrade.exec(directory: d, ggLog: ggLog);
+
+          expect(
+            messages.join('\n'),
+            contains('✓ Run »yarn upgrade --latest«'),
+          );
+        });
+
+        test('uses npm when no lock file matches', () async {
+          writePackageJson(lockFile: null);
+          mockNodeUpgrade(executable: 'npm', args: ['update']);
+
+          await doUpgrade.exec(directory: d, ggLog: ggLog);
+
+          expect(messages.join('\n'), contains('✓ Run »npm update«'));
+        });
+
+        test('reports a failing node upgrade', () async {
+          writePackageJson();
+          mockNodeUpgrade(exitCode: 1, stderr: 'boom');
+
+          await expectLater(
+            doUpgrade.exec(directory: d, ggLog: ggLog),
+            throwsA(
+              isA<Exception>().having(
+                (e) => rmControls(e.toString()),
+                'message',
+                contains('»pnpm update --latest« failed: boom'),
+              ),
+            ),
+          );
+        });
+
+        test('holds typescript at 6 when the repo declares it', () async {
+          // »pnpm update --latest« crosses every major boundary, and
+          // TypeScript 7 is a breaking rewrite. The pin also brings a repo
+          // that already drifted past it back down.
+          writePackageJson(devDependencies: {'typescript': '~7.0.2'});
+          mockNodeUpgrade();
+          mockPin();
+
+          await doUpgrade.exec(directory: d, ggLog: ggLog);
+
+          final all = messages.join('\n');
+          expect(all, contains('✓ Run »pnpm update --latest«'));
+          expect(
+            all,
+            contains('✓ Run »pnpm update --save-exact typescript@6«'),
+          );
+          // The generic upgrade runs first, the pin corrects it afterwards.
+          expect(
+            all.indexOf('pnpm update --latest«'),
+            lessThan(all.indexOf('--save-exact typescript@6')),
+          );
+        });
+
+        test('does not pin a package the repo never declared', () async {
+          // Installing it would add typescript as a new dependency.
+          writePackageJson(devDependencies: {'prettier': '^3.0.0'});
+          mockNodeUpgrade();
+
+          await doUpgrade.exec(directory: d, ggLog: ggLog);
+
+          expect(messages.join('\n'), isNot(contains('typescript@6')));
+          verifyNever(
+            () => processWrapper.run(
+              any(),
+              any(that: contains('typescript@6')),
+              workingDirectory: any(named: 'workingDirectory'),
+              runInShell: any(named: 'runInShell'),
+              environment: any(named: 'environment'),
+            ),
+          );
+        });
+
+        test('pins even with --no-major-versions', () async {
+          // The pin states which version the repo must be on; it is not an
+          // upgrade policy.
+          writePackageJson(devDependencies: {'typescript': '~7.0.2'});
+          mockNodeUpgrade(majorVersions: false);
+          mockDartPubUpgrade(majorVersions: false);
+          mockPin();
+
+          await doUpgrade.exec(
+            directory: d,
+            ggLog: ggLog,
+            majorVersions: false,
+          );
+
+          expect(
+            messages.join('\n'),
+            contains('✓ Run »pnpm update --save-exact typescript@6«'),
+          );
+        });
+
+        test('reports a failing pin', () async {
+          writePackageJson(devDependencies: {'typescript': '~7.0.2'});
+          mockNodeUpgrade();
+          mockPin(exitCode: 1, stderr: 'nope');
+
+          await expectLater(
+            doUpgrade.exec(directory: d, ggLog: ggLog),
+            throwsA(
+              isA<Exception>().having(
+                (e) => rmControls(e.toString()),
+                'message',
+                contains(
+                  '»pnpm update --save-exact typescript@6« failed: nope',
+                ),
+              ),
+            ),
+          );
+        });
+
+        test('restores a pnpm-workspace.yaml the upgrade rewrote', () async {
+          // pnpm is known to rewrite »link:« specs to »file:«, which copies
+          // instead of symlinking — sibling edits would stop propagating.
+          const original = 'overrides:\n  "@org/sibling": link:../sibling\n';
+          writePackageJson();
+          File('${d.path}/pnpm-workspace.yaml').writeAsStringSync(original);
+          mockNodeUpgrade(
+            onRun: () =>
+                File('${d.path}/pnpm-workspace.yaml').writeAsStringSync(
+                  'overrides:\n  "@org/sibling": file:../sibling\n',
+                ),
+          );
+
+          await doUpgrade.exec(directory: d, ggLog: ggLog);
+
+          expect(
+            File('${d.path}/pnpm-workspace.yaml').readAsStringSync(),
+            original,
+          );
+          expect(
+            messages.join('\n'),
+            contains('The upgrade rewrote pnpm-workspace.yaml'),
+          );
+        });
+
+        test('leaves an untouched pnpm-workspace.yaml alone', () async {
+          const original = 'overrides:\n  "@org/sibling": link:../sibling\n';
+          writePackageJson();
+          File('${d.path}/pnpm-workspace.yaml').writeAsStringSync(original);
+          mockNodeUpgrade();
+
+          await doUpgrade.exec(directory: d, ggLog: ggLog);
+
+          expect(
+            File('${d.path}/pnpm-workspace.yaml').readAsStringSync(),
+            original,
+          );
+          expect(messages.join('\n'), isNot(contains('The upgrade rewrote')));
         });
       });
 

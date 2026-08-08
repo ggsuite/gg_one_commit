@@ -17,9 +17,17 @@ import 'package:gg_status_printer/gg_status_printer.dart';
 import 'package:matcher/expect.dart';
 import 'package:mocktail/mocktail.dart';
 
-/// Upgrades all dependencies of the package via
-/// »dart pub upgrade [--major-versions] --tighten«
-/// (»flutter pub upgrade …« in a Flutter repo).
+/// Upgrades all dependencies of the package — **every ecosystem it has**.
+///
+/// - a `pubspec.yaml` is upgraded with »dart pub upgrade [--major-versions]
+///   --tighten« (»flutter pub upgrade …« in a Flutter repo)
+/// - a `package.json` is upgraded with the project's package manager
+///   (»pnpm update [--latest]«, »yarn upgrade [--latest]«, »npm update«)
+///
+/// The two are independent, so a *hybrid* — a repository carrying both
+/// manifests — runs both. Before, the command returned early without a
+/// `pubspec.yaml`, so a TypeScript repository was never upgraded at all and a
+/// hybrid only ever saw its Dart side move.
 ///
 /// The upgrade itself runs no checks — the flows that call it (`gg do push`,
 /// `gg do publish`) run `gg can commit` right afterwards, so validating here
@@ -60,12 +68,17 @@ class DoUpgradeDeps extends DirCommand<void> {
     // Does directory exist?
     await check(directory: directory);
 
-    // Without a pubspec.yaml there are no pub dependencies to upgrade.
-    // The ticket-wide caller also visits TypeScript repos, where
-    // »dart pub upgrade« would fail.
-    final pubspec = File('${directory.path}/pubspec.yaml');
-    if (!pubspec.existsSync()) {
-      ggLog(cDetail('No pubspec.yaml — nothing to upgrade.'));
+    // Each manifest is looked at on its own, so a hybrid upgrades both sides.
+    final hasPubspec = File('${directory.path}/pubspec.yaml').existsSync();
+    final hasPackageJson = File('${directory.path}/package.json').existsSync();
+
+    if (!hasPubspec && !hasPackageJson) {
+      ggLog(
+        cDetail(
+          'No pubspec.yaml and no package.json — nothing '
+          'to upgrade.',
+        ),
+      );
       return;
     }
 
@@ -81,12 +94,23 @@ class DoUpgradeDeps extends DirCommand<void> {
     // Perform the upgrade. Runs unconditionally: a versions-only check would
     // skip »--tighten« exactly when the bounds are loose but the versions are
     // current.
-    await _runDartPubUpgrade(
-      directory: directory,
-      majorVersions: majorVersions,
-    );
+    //
+    // Dart goes first: its »pub upgrade --tighten« rewrites pubspec.lock, and
+    // a hybrid's npm lifecycle scripts may shell into the Dart side, which
+    // should then already be resolved.
+    if (hasPubspec) {
+      await _runDartPubUpgrade(
+        directory: directory,
+        majorVersions: majorVersions,
+      );
+    }
 
-    // Tell the user whether the upgrade changed anything.
+    if (hasPackageJson) {
+      await _runNodeUpgrade(directory: directory, majorVersions: majorVersions);
+    }
+
+    // Tell the user whether the upgrade changed anything. The verdict covers
+    // both ecosystems, because the hash covers both lock files.
     final hashAfter = await _state.currentHash(
       directory: directory,
       ggLog: ggLog,
@@ -121,13 +145,117 @@ class DoUpgradeDeps extends DirCommand<void> {
   }
 
   // ...........................................................................
+  /// Runs the node package manager's upgrade — »pnpm update [--latest]« and
+  /// its yarn/npm equivalents.
+  ///
+  /// `pnpm-workspace.yaml` is restored afterwards when the run rewrote it. In
+  /// a ticket workspace its `overrides` section redirects siblings to
+  /// `link:../…` (written by `gg_localize_refs`), and pnpm is known to rewrite
+  /// such specs to `file:` — which copies instead of symlinking, so edits in a
+  /// sibling would silently stop propagating mid-ticket.
+  Future<void> _runNodeUpgrade({
+    required Directory directory,
+    required bool majorVersions,
+  }) async {
+    final packageManager = detectTypeScriptPackageManager(directory);
+
+    final workspaceFile = File('${directory.path}/$_pnpmWorkspaceFileName');
+    final workspaceBefore = workspaceFile.existsSync()
+        ? workspaceFile.readAsStringSync()
+        : null;
+
+    await _runNodeCommand(
+      directory: directory,
+      command: packageManager.updateCommand(latest: majorVersions),
+    );
+
+    // The generic upgrade above crosses every major boundary. Bring the
+    // packages gg holds at a fixed version back down — this also repairs a
+    // repository that already drifted past the pin. Runs regardless of
+    // --major-versions: the pin states which version the repository must be
+    // on, it is not an upgrade policy.
+    final declared = readNpmDependencyNames(directory);
+    for (final entry in pinnedNpmVersions.entries) {
+      // Pinning a package the repository never declared would add it.
+      if (!declared.contains(entry.key)) {
+        continue;
+      }
+      await _runNodeCommand(
+        directory: directory,
+        command: packageManager.pinCommand(
+          package: entry.key,
+          version: entry.value,
+        ),
+      );
+    }
+
+    if (workspaceBefore != null &&
+        workspaceFile.readAsStringSync() != workspaceBefore) {
+      workspaceFile.writeAsStringSync(workspaceBefore);
+      ggLog(
+        cWarn(
+          'The upgrade rewrote $_pnpmWorkspaceFileName — restored it so the '
+          'local sibling references stay intact.',
+        ),
+      );
+    }
+  }
+
+  // ...........................................................................
+  /// Runs one node package-manager command and reports it like every other
+  /// step of the upgrade.
+  Future<void> _runNodeCommand({
+    required Directory directory,
+    required ({String executable, List<String> args}) command,
+  }) async {
+    final label = '${command.executable} ${command.args.join(' ')}';
+
+    await GgStatusPrinter<bool>(
+      message: 'Run »$label«',
+      ggLog: ggLog,
+      dark: true,
+    ).logTask(
+      task: () async {
+        final result = await _processWrapper.run(
+          command.executable,
+          command.args,
+          workingDirectory: directory.path,
+          // npm/pnpm/yarn are shell shims (pnpm.cmd on Windows, a PATH script
+          // elsewhere), so run through a shell — otherwise Windows cannot
+          // find the executable.
+          runInShell: true,
+          // pnpm 11 blocks »exotic« sub-dependencies (git refs) by default,
+          // which a ticket workspace legitimately carries.
+          environment: const <String, String>{
+            'PNPM_CONFIG_BLOCK_EXOTIC_SUBDEPS': 'false',
+          },
+        );
+
+        if (result.exitCode != 0) {
+          throw Exception(cError('»$label« failed: ${result.stderr}'));
+        }
+
+        return true;
+      },
+      success: (success) => success,
+    );
+  }
+
+  /// pnpm's per-repository settings file, which also carries the `link:`
+  /// overrides `gg_localize_refs` writes.
+  static const String _pnpmWorkspaceFileName = 'pnpm-workspace.yaml';
+
+  // ...........................................................................
   /// Runs »dart pub upgrade« — »flutter pub upgrade« in a Flutter repo, where
   /// plain `dart pub` cannot resolve the `sdk: flutter` dependencies.
   Future<void> _runDartPubUpgrade({
     required Directory directory,
     required bool majorVersions,
   }) async {
-    final executable = checkProjectType(directory) == ProjectType.flutter
+    // detectProjectType, not checkProjectType: the latter reports *any*
+    // hybrid as typescript, so a hybrid Flutter repository would silently get
+    // »dart pub upgrade« and fail to resolve its »sdk: flutter« dependencies.
+    final executable = detectProjectType(directory) == ProjectType.flutter
         ? 'flutter'
         : 'dart';
 
