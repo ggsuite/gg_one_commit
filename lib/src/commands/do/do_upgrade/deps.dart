@@ -45,6 +45,7 @@ class DoUpgradeDeps extends DirCommand<void> {
     required Directory directory,
     required GgLog ggLog,
     bool? majorVersions,
+    Map<String, dynamic> options = const {},
   }) => get(directory: directory, ggLog: ggLog, majorVersions: majorVersions);
 
   // ...........................................................................

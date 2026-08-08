@@ -45,6 +45,7 @@ class CreateTicket extends DirCommand<void> {
     required GgLog ggLog,
     String? branchName,
     String? message,
+    Map<String, dynamic> options = const {},
   }) => get(
     directory: directory,
     ggLog: ggLog,

@@ -74,6 +74,7 @@ class DoCommit extends DirCommand<void> {
     cl.LogType? logType,
     bool? updateChangeLog,
     bool? force,
+    Map<String, dynamic> options = const {},
   }) => get(
     directory: directory,
     ggLog: ggLog,
