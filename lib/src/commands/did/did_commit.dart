@@ -15,7 +15,7 @@ class DidCommit extends DidCommand {
     super.description = 'Check if this repo was committed',
     super.shortDescription = 'All changes are committed',
     super.suggestion = 'Not committed yet. Please run »gg do commit«.',
-    super.stateKey = 'doCommit',
+    super.stateKey = GgState.doCommitKey,
   });
 }
 

@@ -188,7 +188,7 @@ class DoCommit extends DirCommand<void> {
   final GgState state;
 
   /// The key used to save the state of the command
-  final String stateKey = 'doCommit';
+  final String stateKey = GgState.doCommitKey;
 
   // ...........................................................................
   /// Adds and commits the current directory.
