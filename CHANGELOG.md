@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.2.0 - 2026-08-09
+
+### Changed
+
+- Improve commit behavior
+- Move gg commit conventions from gg_git to gg_one_core
+- Record the doCommit state in system commits again
+
 ## 2.1.0 - 2026-08-09
 
 ### Changed
