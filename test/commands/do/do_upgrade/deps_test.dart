@@ -452,6 +452,48 @@ void main() {
           );
         });
 
+        test('restores a constraint the upgrade turned into a link:', () async {
+          // pnpm resolves through the pnpm-workspace.yaml overrides and writes
+          // the resolved spec back — so an upgrade silently replaces the
+          // published constraint with a path nobody outside the workspace can
+          // resolve, and »gg can merge« then refuses to merge it.
+          writePackageJson(devDependencies: {'@org/sibling': '^1.0.1'});
+          mockNodeUpgrade(
+            onRun: () => File('${d.path}/package.json').writeAsStringSync(
+              '{"name": "@org/test", "version": "1.0.0", "devDependencies": '
+              '{"@org/sibling": "link:../sibling"}}',
+            ),
+          );
+
+          await doUpgrade.exec(directory: d, ggLog: ggLog);
+
+          expect(
+            File('${d.path}/package.json').readAsStringSync(),
+            contains('"@org/sibling": "^1.0.1"'),
+          );
+          expect(
+            messages.join('\n'),
+            contains('replaced the published constraint of @org/sibling'),
+          );
+        });
+
+        test('leaves a spec that was local before the upgrade', () async {
+          // Undoing a deliberate state is not the guard's job.
+          writePackageJson(devDependencies: {'@org/sibling': 'link:../sib'});
+          mockNodeUpgrade();
+
+          await doUpgrade.exec(directory: d, ggLog: ggLog);
+
+          expect(
+            File('${d.path}/package.json').readAsStringSync(),
+            contains('"@org/sibling": "link:../sib"'),
+          );
+          expect(
+            messages.join('\n'),
+            isNot(contains('replaced the published constraint')),
+          );
+        });
+
         test('restores a pnpm-workspace.yaml the upgrade rewrote', () async {
           // pnpm is known to rewrite »link:« specs to »file:«, which copies
           // instead of symlinking — sibling edits would stop propagating.

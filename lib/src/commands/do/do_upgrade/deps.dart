@@ -5,6 +5,7 @@
 // found in the LICENSE file in the root of this package.
 
 import 'package:gg_one_core/gg_one_core.dart';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:gg_args/gg_args.dart';
@@ -163,6 +164,8 @@ class DoUpgradeDeps extends DirCommand<void> {
     final workspaceBefore = workspaceFile.existsSync()
         ? workspaceFile.readAsStringSync()
         : null;
+    final manifestFile = File('${directory.path}/package.json');
+    final manifestBefore = manifestFile.readAsStringSync();
 
     await _runNodeCommand(
       directory: directory,
@@ -189,6 +192,8 @@ class DoUpgradeDeps extends DirCommand<void> {
       );
     }
 
+    _restoreLocalizedSpecs(file: manifestFile, before: manifestBefore);
+
     if (workspaceBefore != null &&
         workspaceFile.readAsStringSync() != workspaceBefore) {
       workspaceFile.writeAsStringSync(workspaceBefore);
@@ -200,6 +205,101 @@ class DoUpgradeDeps extends DirCommand<void> {
       );
     }
   }
+
+  // ...........................................................................
+  /// Puts back every dependency spec the node upgrade turned into a *local*
+  /// one (`link:`, `file:`, `workspace:`).
+  ///
+  /// In a ticket workspace `pnpm-workspace.yaml` redirects the siblings to
+  /// their checkouts, and pnpm writes the spec it *resolved* back into
+  /// `package.json` — so an upgrade silently replaces a published constraint
+  /// like `^1.0.1` with `link:../../ggsuite/base_dna`. That is a path nobody
+  /// outside this workspace can resolve: `gg can merge` refuses to merge it,
+  /// and publishing it would ship a broken manifest.
+  ///
+  /// The published constraints belong in `package.json`, the redirection in
+  /// `pnpm-workspace.yaml` — this keeps that split intact. Specs that were
+  /// already local before the upgrade are left alone; undoing a deliberate
+  /// state is not this method's job.
+  void _restoreLocalizedSpecs({required File file, required String before}) {
+    final Map<String, String> restore;
+    try {
+      restore = _specsToRestore(before: before, after: file.readAsStringSync());
+      // coverage:ignore-start
+    } catch (_) {
+      return; // An unparsable manifest is reported by the checks that own it.
+    }
+    // coverage:ignore-end
+
+    if (restore.isEmpty) {
+      return;
+    }
+
+    // Edited textually so the formatting of the file survives.
+    var content = file.readAsStringSync();
+    restore.forEach((name, spec) {
+      final key = RegExp.escape(name);
+      content = content.replaceAllMapped(
+        RegExp(
+          '("$key"'
+          r'\s*:\s*)'
+          '"[^"]*"',
+        ),
+        (match) => '${match[1]}"$spec"',
+      );
+    });
+    file.writeAsStringSync(content);
+
+    ggLog(
+      cWarn(
+        'The upgrade replaced the published constraint of '
+        '${restore.keys.join(', ')} with a local reference — restored it. '
+        'The redirection belongs in $_pnpmWorkspaceFileName.',
+      ),
+    );
+  }
+
+  // ...........................................................................
+  /// Dependency name → spec it carried before, for every dependency that is
+  /// local *after* the upgrade but was not before.
+  static Map<String, String> _specsToRestore({
+    required String before,
+    required String after,
+  }) {
+    final result = <String, String>{};
+    final oldJson = jsonDecode(before);
+    final newJson = jsonDecode(after);
+    if (oldJson is! Map<String, dynamic> || newJson is! Map<String, dynamic>) {
+      return result; // coverage:ignore-line
+    }
+
+    for (final section in const <String>[
+      'dependencies',
+      'devDependencies',
+      'peerDependencies',
+      'optionalDependencies',
+    ]) {
+      final oldEntries = oldJson[section];
+      final newEntries = newJson[section];
+      if (oldEntries is! Map || newEntries is! Map) continue;
+      newEntries.forEach((key, value) {
+        final name = key.toString();
+        final oldValue = oldEntries[name];
+        if (value is! String || oldValue is! String) return;
+        if (_isLocalSpec(value) && !_isLocalSpec(oldValue)) {
+          result[name] = oldValue;
+        }
+      });
+    }
+    return result;
+  }
+
+  // ...........................................................................
+  /// Whether [spec] points at a checkout instead of a registry release.
+  static bool _isLocalSpec(String spec) =>
+      spec.startsWith('link:') ||
+      spec.startsWith('file:') ||
+      spec.startsWith('workspace:');
 
   // ...........................................................................
   /// Runs one node package-manager command and reports it like every other

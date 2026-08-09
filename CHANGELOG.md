@@ -26,6 +26,15 @@ installing one it never declared would add it.
 `checkProjectType`. The latter reports *any* hybrid as TypeScript, so a hybrid
 Flutter repository silently got `dart pub upgrade` and could not resolve its
 `sdk: flutter` dependencies.
+- A dependency spec the node upgrade turned into a **local** reference
+(`link:`/`file:`/`workspace:`) is restored to the published constraint it had.
+pnpm resolves a dependency through the `overrides` of `pnpm-workspace.yaml` and
+writes the *resolved* spec back into `package.json`, so in a ticket workspace an
+upgrade silently replaced e.g. `^1.0.1` with
+`link:../../ggsuite/base_dna` — a path nobody outside the workspace can
+resolve. `gg can merge` then refused to merge the repository, and publishing it
+would have shipped a broken manifest. Specs that were already local before the
+upgrade are left alone.
 - A `pnpm-workspace.yaml` the node upgrade rewrote is restored, with a warning.
 In a ticket workspace its `overrides` section redirects siblings to `link:../…`,
 and pnpm is known to rewrite such specs to `file:` — which copies instead of
