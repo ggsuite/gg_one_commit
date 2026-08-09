@@ -63,9 +63,14 @@ void main() async {
         await addRemoteToLocal(local: local, remote: remote);
         await enableEolLf(local);
 
+        // gg commits — including the »#gg: Add .gg/gg.json check results«
+        // state commit — exist on feature branches only; the default branch
+        // receives release merges and tags.
+        await createBranch(local, 'feature');
+
         await addAndCommitPubspecFile(local);
         await addAndCommitSampleFile(local);
-        await pushLocalChanges(local);
+        await pushLocalChangesUpstream(local, 'feature');
 
         // Init pubspec.yaml
         await File(
@@ -87,21 +92,7 @@ void main() async {
     doPush = DoPush(ggLog: ggLog, canPush: canPush);
     canCommit = MockCanCommit();
 
-    // This test repo lives on »main«, where »gg do commit« refuses to run.
-    // Branch policy is not what these tests are about.
-    final isFeatureBranch = MockIsFeatureBranch();
-    when(
-      () => isFeatureBranch.get(
-        directory: any(named: 'directory'),
-        ggLog: any(named: 'ggLog'),
-      ),
-    ).thenAnswer((_) async => true);
-
-    doCommit = DoCommit(
-      ggLog: ggLog,
-      canCommit: canCommit,
-      isFeatureBranch: isFeatureBranch,
-    );
+    doCommit = DoCommit(ggLog: ggLog, canCommit: canCommit);
     isPushed = IsPushed(ggLog: ggLog);
     ggJson = File(join(dLocal.path, '.gg', 'gg.json'));
   });
