@@ -221,7 +221,7 @@ void main() {
         ], workingDirectory: d.path),
       ).called(1);
 
-      final ticketFile = File('${d.path}${Platform.pathSeparator}.ticket');
+      final ticketFile = File('${d.path}${Platform.pathSeparator}ticket.json');
       expect(ticketFile.existsSync(), isTrue);
 
       final content =
@@ -499,7 +499,7 @@ void main() {
     });
 
     test(
-      'should write .ticket file when message is provided programmatically',
+      'should write ticket.json file when message is provided programmatically',
       () async {
         when(
           () => isPushed.get(
@@ -519,7 +519,9 @@ void main() {
           message: 'Programmatic message',
         );
 
-        final ticketFile = File('${d.path}${Platform.pathSeparator}.ticket');
+        final ticketFile = File(
+          '${d.path}${Platform.pathSeparator}ticket.json',
+        );
         expect(ticketFile.existsSync(), isTrue);
 
         final content =
@@ -530,7 +532,7 @@ void main() {
     );
 
     test(
-      'should not write .ticket file when message is null programmatically',
+      'should not write ticket.json file when message is null programmatically',
       () async {
         when(
           () => isPushed.get(
@@ -549,7 +551,9 @@ void main() {
           branchName: 'feat_test',
         );
 
-        final ticketFile = File('${d.path}${Platform.pathSeparator}.ticket');
+        final ticketFile = File(
+          '${d.path}${Platform.pathSeparator}ticket.json',
+        );
         expect(ticketFile.existsSync(), isFalse);
       },
     );
