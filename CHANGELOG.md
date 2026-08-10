@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Various fixes
+
 ## 2.2.1 - 2026-08-10
 
 ### Removed
