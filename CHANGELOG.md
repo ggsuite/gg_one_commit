@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Provide gg via npm
+
 ## 2.2.2 - 2026-08-10
 
 ### Fixed
