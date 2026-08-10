@@ -42,6 +42,7 @@ class DoPush extends DirCommand<void> {
     required Directory directory,
     required GgLog ggLog,
     bool? force,
+    Map<String, dynamic> options = const {},
   }) => get(directory: directory, ggLog: ggLog, force: force);
 
   // ...........................................................................

@@ -45,6 +45,7 @@ class CreateTicket extends DirCommand<void> {
     required GgLog ggLog,
     String? branchName,
     String? message,
+    Map<String, dynamic> options = const {},
   }) => get(
     directory: directory,
     ggLog: ggLog,
@@ -88,7 +89,7 @@ class CreateTicket extends DirCommand<void> {
     argParser.addOption(
       'message',
       abbr: 'm',
-      help: 'Ticket description written to the .ticket file.',
+      help: 'Ticket description written to the ticket.json file.',
       mandatory: true,
     );
   }
@@ -197,7 +198,7 @@ class CreateTicket extends DirCommand<void> {
     );
   }
 
-  /// Writes the .ticket file when [message] is not null.
+  /// Writes the ticket.json file when [message] is not null.
   Future<void> _writeTicketFile({
     required Directory directory,
     required String branchName,
@@ -207,7 +208,7 @@ class CreateTicket extends DirCommand<void> {
       return;
     }
 
-    final ticketFile = File(path.join(directory.path, '.ticket'));
+    final ticketFile = File(path.join(directory.path, 'ticket.json'));
     final data = <String, String>{
       'issue_id': branchName,
       'description': message,

@@ -74,6 +74,7 @@ class DoCommit extends DirCommand<void> {
     cl.LogType? logType,
     bool? updateChangeLog,
     bool? force,
+    Map<String, dynamic> options = const {},
   }) => get(
     directory: directory,
     ggLog: ggLog,
@@ -187,7 +188,7 @@ class DoCommit extends DirCommand<void> {
   final GgState state;
 
   /// The key used to save the state of the command
-  final String stateKey = 'doCommit';
+  final String stateKey = GgState.doCommitKey;
 
   // ...........................................................................
   /// Adds and commits the current directory.
@@ -360,14 +361,24 @@ class DoCommit extends DirCommand<void> {
     // Thus »gg can commit|push|publish« will not start from beginning
     await state.updateHash(hash: hashBefore, directory: directory);
 
-    // If everything was committed before, commit the new changes also
+    // If everything was committed before, commit the new changes also.
+    // Scoped to the files this method itself wrote — the changelog entry and
+    // the state hash — so a file that turned dirty in the meantime (an
+    // editor autosave, a background pub get) is never swept into it. The
+    // state file is only named when it exists; a pathspec unknown to git
+    // fails the commit.
     if (commit) {
+      const stateFile = '.gg/${GgState.configFileName}';
       await _commit.commit(
         ggLog: (_) {}, // coverage:ignore-line
         directory: directory,
         doStage: true,
         message: message,
         ammendWhenNotPushed: true,
+        paths: [
+          'CHANGELOG.md',
+          if (File('${directory.path}/$stateFile').existsSync()) stateFile,
+        ],
       );
     }
 

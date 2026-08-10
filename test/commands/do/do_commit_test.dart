@@ -602,7 +602,13 @@ void main() {
               force: true,
             );
 
-            expect(await isCommitted(d), isTrue);
+            // The user's own commit is written — that is what --force buys.
+            expect(await modifiedFiles(d), isNot(contains(sampleFileName)));
+
+            // The state file is the one thing that stays uncommitted: it
+            // would need a »#gg: « commit, and those never happen on the
+            // default branch.
+            expect(await modifiedFiles(d), ['.gg/']);
           });
 
           test('- a detached HEAD', () async {
