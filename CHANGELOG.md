@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.2.3 - 2026-08-11
+
+### Changed
+
+- Provide gg via npm
+- Fix shell changes
+
 ## 2.2.2 - 2026-08-10
 
 ### Fixed
