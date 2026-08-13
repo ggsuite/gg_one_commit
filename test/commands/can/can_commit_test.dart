@@ -30,34 +30,28 @@ void main() {
 
   // ...........................................................................
   void mockCommands() {
-    when(
-      () => commands.pubGetOffline.exec(directory: d, ggLog: ggLog),
-    ).thenAnswer((_) async {
-      messages.add('did pub get');
-    });
-    when(() => commands.analyze.exec(directory: d, ggLog: ggLog)).thenAnswer((
-      _,
-    ) async {
-      messages.add('did analyze');
-    });
-    when(() => commands.format.exec(directory: d, ggLog: ggLog)).thenAnswer((
-      _,
-    ) async {
-      messages.add('did format');
-    });
-    when(() => commands.build.exec(directory: d, ggLog: ggLog)).thenAnswer((
-      _,
-    ) async {
-      messages.add('did build');
-    });
-    when(() => commands.tests.exec(directory: d, ggLog: ggLog)).thenAnswer((
-      _,
-    ) async {
-      messages.add('did cover');
-    });
-    when(
-      () => commands.packageJsonScripts.exec(directory: d, ggLog: ggLog),
-    ).thenAnswer((_) async {});
+    when(() => commands.pubGetOffline.exec(directory: d, ggLog: ggLog))
+        .thenAnswer((_) async {
+          messages.add('did pub get');
+        });
+    when(() => commands.analyze.exec(directory: d, ggLog: ggLog))
+        .thenAnswer((_) async {
+          messages.add('did analyze');
+        });
+    when(() => commands.format.exec(directory: d, ggLog: ggLog))
+        .thenAnswer((_) async {
+          messages.add('did format');
+        });
+    when(() => commands.build.exec(directory: d, ggLog: ggLog))
+        .thenAnswer((_) async {
+          messages.add('did build');
+        });
+    when(() => commands.tests.exec(directory: d, ggLog: ggLog))
+        .thenAnswer((_) async {
+          messages.add('did cover');
+        });
+    when(() => commands.packageJsonScripts.exec(directory: d, ggLog: ggLog))
+        .thenAnswer((_) async {});
   }
 
   // ...........................................................................

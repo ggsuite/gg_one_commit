@@ -26,11 +26,10 @@ class CreateTicket extends DirCommand<void> {
     super.description = 'Create a ticket branch and reapply local changes',
     CanCheckout? canCheckout,
     IsPushed? isPushed,
-    GgProcessWrapper processWrapper = const GgProcessWrapper(),
+    this._processWrapper = const GgProcessWrapper(),
     // coverage:ignore-start
   }) : _canCheckout = canCheckout ?? CanCheckout(ggLog: ggLog),
-       _isPushed = isPushed ?? IsPushed(ggLog: ggLog),
-       _processWrapper = processWrapper {
+       _isPushed = isPushed ?? IsPushed(ggLog: ggLog) {
     // coverage:ignore-end
     _addArgs();
   }

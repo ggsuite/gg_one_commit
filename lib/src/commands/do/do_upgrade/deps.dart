@@ -5,6 +5,7 @@
 // found in the LICENSE file in the root of this package.
 
 import 'package:gg_one_core/gg_one_core.dart';
+
 import 'dart:convert';
 import 'dart:io';
 
@@ -41,9 +42,8 @@ class DoUpgradeDeps extends DirCommand<void> {
     super.description = 'Upgrade all dependencies of this repo',
     GgState? state,
     CanUpgrade? canUpgrade,
-    GgProcessWrapper processWrapper = const GgProcessWrapper(),
+    this._processWrapper = const GgProcessWrapper(),
   }) : _state = state ?? GgState(ggLog: ggLog),
-       _processWrapper = processWrapper,
        _canUpgrade = canUpgrade ?? CanUpgrade(ggLog: ggLog) {
     _addParam();
   }

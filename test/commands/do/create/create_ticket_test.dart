@@ -52,9 +52,8 @@ void main() {
     String stdout = '',
     String stderr = '',
   }) {
-    when(
-      () => processWrapper.run('git', args, workingDirectory: d.path),
-    ).thenAnswer((_) async => ProcessResult(0, exitCode, stdout, stderr));
+    when(() => processWrapper.run('git', args, workingDirectory: d.path))
+        .thenAnswer((_) async => ProcessResult(0, exitCode, stdout, stderr));
   }
 
   /// Mocks a dirty worktree, i.e. »git stash create« returns a commit hash.

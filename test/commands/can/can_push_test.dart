@@ -31,12 +31,11 @@ void main() {
 
   // ...........................................................................
   void mockCommands() {
-    when(
-      () => commands.isCommitted.exec(directory: d, ggLog: ggLog),
-    ).thenAnswer((_) async {
-      messages.add('did commit');
-      return true;
-    });
+    when(() => commands.isCommitted.exec(directory: d, ggLog: ggLog))
+        .thenAnswer((_) async {
+          messages.add('did commit');
+          return true;
+        });
   }
 
   // ...........................................................................

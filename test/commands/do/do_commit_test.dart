@@ -206,9 +206,8 @@ void main() {
                 );
 
                 // Check CHANGELOG.md
-                final changelog = await File(
-                  '${d.path}/CHANGELOG.md',
-                ).readAsString();
+                final changelog = await File('${d.path}/CHANGELOG.md')
+                    .readAsString();
                 expect(changelog, contains('# Changelog\n'));
                 expect(changelog, contains('## Unreleased\n'));
                 expect(changelog, contains('## Added\n'));
@@ -229,9 +228,8 @@ void main() {
                 ]);
 
                 // Check CHANGELOG.md
-                final changelog = await File(
-                  '${d.path}/CHANGELOG.md',
-                ).readAsString();
+                final changelog = await File('${d.path}/CHANGELOG.md')
+                    .readAsString();
                 expect(changelog, contains('# Changelog\n'));
                 expect(changelog, contains('## Unreleased\n'));
                 expect(changelog, contains('## Added\n'));
@@ -252,9 +250,8 @@ void main() {
               );
 
               // Check CHANGELOG.md
-              final changelog = await File(
-                '${d.path}/CHANGELOG.md',
-              ).readAsString();
+              final changelog = await File('${d.path}/CHANGELOG.md')
+                  .readAsString();
               expect(changelog, contains('# Changelog\n'));
               expect(changelog, contains('## Unreleased\n'));
               expect(changelog, contains('## Added\n'));
@@ -524,9 +521,8 @@ void main() {
 
         test('when pubspec.yaml does not contain a repo URL', () async {
           // Remove repository URL from pubspec.yaml
-          await File(
-            '${d.path}/pubspec.yaml',
-          ).writeAsString('version: 1.0.0\n');
+          await File('${d.path}/pubspec.yaml')
+              .writeAsString('version: 1.0.0\n');
 
           await addFileWithoutCommitting(d);
 
@@ -706,9 +702,8 @@ void main() {
             ]);
 
             // Check CHANGELOG.md
-            final changelog = await File(
-              '${d.path}/CHANGELOG.md',
-            ).readAsString();
+            final changelog = await File('${d.path}/CHANGELOG.md')
+                .readAsString();
             expect(changelog, contains('# Changelog\n'));
             expect(changelog, contains('## Unreleased\n'));
             expect(changelog, contains('## $resultingLogType\n'));

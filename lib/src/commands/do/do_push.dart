@@ -5,6 +5,7 @@
 // found in the LICENSE file in the root of this package.
 
 import 'package:gg_one_core/gg_one_core.dart';
+
 import 'dart:io';
 
 import 'package:gg_args/gg_args.dart';
@@ -23,12 +24,11 @@ class DoPush extends DirCommand<void> {
     super.description = 'Push changes in this repo',
     IsPushed? isPushed,
     CanPush? canPush,
-    GgProcessWrapper processWrapper = const GgProcessWrapper(),
+    this._processWrapper = const GgProcessWrapper(),
     GgState? state,
     UpstreamBranch? upstreamBranch,
     LocalBranch? localBranch,
-  }) : _processWrapper = processWrapper,
-       _isPushedViaGit = isPushed ?? IsPushed(ggLog: ggLog),
+  }) : _isPushedViaGit = isPushed ?? IsPushed(ggLog: ggLog),
        _canPush = canPush ?? CanPush(ggLog: ggLog),
        _upstreamBranch = upstreamBranch ?? UpstreamBranch(ggLog: ggLog),
        _localBranch = localBranch ?? LocalBranch(ggLog: ggLog),

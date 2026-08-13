@@ -501,8 +501,8 @@ void main() {
           writePackageJson();
           File('${d.path}/pnpm-workspace.yaml').writeAsStringSync(original);
           mockNodeUpgrade(
-            onRun: () =>
-                File('${d.path}/pnpm-workspace.yaml').writeAsStringSync(
+            onRun: () => File('${d.path}/pnpm-workspace.yaml')
+                .writeAsStringSync(
                   'overrides:\n  "@org/sibling": file:../sibling\n',
                 ),
           );
