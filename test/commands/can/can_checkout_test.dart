@@ -1,5 +1,5 @@
 // @license
-// Copyright (c) 2025 Göran Hegenberg. All Rights Reserved.
+// Copyright (c) ggsuite
 //
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
@@ -32,9 +32,8 @@ void main() {
     await initGit(d);
     await addAndCommitSampleFile(d);
     isMainBranch = MockIsMainBranch();
-    when(
-      () => isMainBranch.exec(directory: d, ggLog: ggLog),
-    ).thenAnswer((_) async => true);
+    when(() => isMainBranch.exec(directory: d, ggLog: ggLog))
+        .thenAnswer((_) async => true);
     canCheckout = CanCheckout(ggLog: ggLog, isMainBranch: isMainBranch);
   });
 

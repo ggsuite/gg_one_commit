@@ -1,5 +1,5 @@
 // @license
-// Copyright (c) 2019 - 2024 Dr. Gabriel Gatzsche. All Rights Reserved.
+// Copyright (c) ggsuite
 //
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
@@ -73,15 +73,13 @@ void main() async {
         await pushLocalChangesUpstream(local, 'feature');
 
         // Init pubspec.yaml
-        await File(
-          join(local.path, 'pubspec.yaml'),
-        ).writeAsString('version: 1.0.0\nrepository: https://foo.com');
+        await File(join(local.path, 'pubspec.yaml'))
+            .writeAsString('version: 1.0.0\nrepository: https://foo.com');
         await commitFile(local, 'pubspec.yaml');
 
         // Init CHANGELOG.md
-        await File(
-          join(local.path, 'CHANGELOG.md'),
-        ).writeAsString('# Changelog');
+        await File(join(local.path, 'CHANGELOG.md'))
+            .writeAsString('# Changelog');
         await commitFile(local, 'CHANGELOG.md');
       },
     );
@@ -144,9 +142,8 @@ void main() async {
             await updateSampleFileWithoutCommitting(dLocal);
 
             // Commit the change using ggDoCommit
-            when(
-              () => canCommit.exec(directory: dLocal, ggLog: ggLog),
-            ).thenAnswer((_) async => {});
+            when(() => canCommit.exec(directory: dLocal, ggLog: ggLog))
+                .thenAnswer((_) async => {});
             await doCommit.exec(
               directory: dLocal,
               ggLog: ggLog,
@@ -212,9 +209,8 @@ void main() async {
               await updateSampleFileWithoutCommitting(dLocal);
 
               // Commit the change using ggDoCommit
-              when(
-                () => canCommit.exec(directory: dLocal, ggLog: ggLog),
-              ).thenAnswer((_) async => {});
+              when(() => canCommit.exec(directory: dLocal, ggLog: ggLog))
+                  .thenAnswer((_) async => {});
               await doCommit.exec(
                 directory: dLocal,
                 ggLog: ggLog,

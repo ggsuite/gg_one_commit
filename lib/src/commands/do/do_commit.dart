@@ -1,10 +1,11 @@
 // @license
-// Copyright (c) 2019 - 2024 Dr. Gabriel Gatzsche. All Rights Reserved.
+// Copyright (c) ggsuite
 //
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
 
 import 'package:gg_one_core/gg_one_core.dart';
+
 import 'dart:io';
 
 import 'package:gg_args/gg_args.dart';
@@ -49,13 +50,12 @@ class DoCommit extends DirCommand<void> {
     IsCommitted? isCommitted,
     CanCommit? canCommit,
     Commit? commit,
-    GgProcessWrapper processWrapper = const GgProcessWrapper(),
+    this._processWrapper = const GgProcessWrapper(),
     GgState? state,
     cl.Add? addToChangeLog,
     IsFeatureBranch? isFeatureBranch,
     LocalBranch? localBranch,
-  }) : _processWrapper = processWrapper,
-       _isFeatureBranch = isFeatureBranch ?? IsFeatureBranch(ggLog: ggLog),
+  }) : _isFeatureBranch = isFeatureBranch ?? IsFeatureBranch(ggLog: ggLog),
        _localBranch = localBranch ?? LocalBranch(ggLog: ggLog),
        _isGitCommitted = isCommitted ?? IsCommitted(ggLog: ggLog),
        _canCommit = canCommit ?? CanCommit(ggLog: ggLog),
@@ -335,9 +335,8 @@ class DoCommit extends DirCommand<void> {
     required bool commit,
   }) async {
     // Check if message is already in CHANGELOG.md
-    final changeLog = await File(
-      '${directory.path}/CHANGELOG.md',
-    ).readAsString();
+    final changeLog = await File('${directory.path}/CHANGELOG.md')
+        .readAsString();
 
     if (changeLog.contains(message)) {
       return false;

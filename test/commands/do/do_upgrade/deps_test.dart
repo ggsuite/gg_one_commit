@@ -1,5 +1,5 @@
 // @license
-// Copyright (c) 2019 - 2024 Dr. Gabriel Gatzsche. All Rights Reserved.
+// Copyright (c) ggsuite
 //
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
@@ -501,8 +501,8 @@ void main() {
           writePackageJson();
           File('${d.path}/pnpm-workspace.yaml').writeAsStringSync(original);
           mockNodeUpgrade(
-            onRun: () =>
-                File('${d.path}/pnpm-workspace.yaml').writeAsStringSync(
+            onRun: () => File('${d.path}/pnpm-workspace.yaml')
+                .writeAsStringSync(
                   'overrides:\n  "@org/sibling": file:../sibling\n',
                 ),
           );
