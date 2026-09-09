@@ -334,9 +334,12 @@ class DoCommit extends DirCommand<void> {
     required String repoUrl,
     required bool commit,
   }) async {
-    // Check if message is already in CHANGELOG.md
-    final changeLog = await File('${directory.path}/CHANGELOG.md')
-        .readAsString();
+    // Check if message is already in CHANGELOG.md. A missing CHANGELOG.md
+    // contains no message — it is created by the changelog writer below.
+    final changeLogFile = File('${directory.path}/CHANGELOG.md');
+    final changeLog = await changeLogFile.exists()
+        ? await changeLogFile.readAsString()
+        : '';
 
     if (changeLog.contains(message)) {
       return false;

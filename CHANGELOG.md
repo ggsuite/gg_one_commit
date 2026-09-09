@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.4.1 - 2026-09-09
+
+### Changed
+
+- Create CHANGELOG.md when it is missing instead of failing with PathNotFound
+
 ## 2.4.0 - 2026-09-02
 
 ### Changed
