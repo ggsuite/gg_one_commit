@@ -44,6 +44,19 @@ Future<void> renameBranch(Directory d, String branch) async {
   }
 }
 
+/// Removes a file from the repo and commits the removal.
+Future<void> removeAndCommitFile(Directory d, String fileName) async {
+  for (final args in [
+    ['rm', '-q', fileName],
+    ['commit', '-m', 'Remove $fileName'],
+  ]) {
+    final result = await Process.run('git', args, workingDirectory: d.path);
+    if (result.exitCode != 0) {
+      throw Exception('Could not remove $fileName: ${result.stderr}');
+    }
+  }
+}
+
 /// Detaches HEAD from the current branch. gg_git has no command for this.
 Future<void> detachHead(Directory d) async {
   final result = await Process.run('git', [
@@ -257,6 +270,32 @@ void main() {
               expect(changelog, contains('## Added\n'));
               expect(changelog, contains('My very special commit message\n'));
             });
+          });
+
+          test('and create CHANGELOG.md when it is missing', () async {
+            // Remove CHANGELOG.md from the repo
+            await removeAndCommitFile(d, 'CHANGELOG.md');
+            expect(await File('${d.path}/CHANGELOG.md').exists(), isFalse);
+
+            // Add uncommitted file
+            await addFileWithoutCommitting(d);
+
+            // Execute command
+            await doCommit.exec(
+              directory: d,
+              ggLog: ggLog,
+              message: 'My very special commit message',
+              logType: LogType.added,
+            );
+
+            // CHANGELOG.md was created, filled and committed
+            final changelog = await File('${d.path}/CHANGELOG.md')
+                .readAsString();
+            expect(changelog, contains('# Changelog\n'));
+            expect(changelog, contains('## Unreleased\n'));
+            expect(changelog, contains('## Added\n'));
+            expect(changelog, contains('My very special commit message\n'));
+            expect(await isCommitted(d), isTrue);
           });
         });
 
