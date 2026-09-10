@@ -39,6 +39,10 @@ class CanCommit extends CommandCluster {
       checks.build,
       checks.tests,
       checks.packageJsonScripts,
+      // A CHANGELOG.md section above the manifest version would be shipped
+      // under a version the release never produces, so it is refused before
+      // it is committed.
+      checks.noFutureVersions,
     ];
   }
 }

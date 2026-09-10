@@ -11,6 +11,7 @@ import 'package:gg_log/gg_log.dart';
 import 'package:gg_one_commit/gg_one_commit.dart';
 import 'package:gg_status_printer/gg_status_printer.dart';
 import 'package:gg_test/gg_test.dart';
+import 'package:gg_version/gg_version.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 import 'package:gg_one_core/gg_one_core.dart';
@@ -52,6 +53,11 @@ void main() {
         });
     when(() => commands.packageJsonScripts.exec(directory: d, ggLog: ggLog))
         .thenAnswer((_) async {});
+    when(() => commands.noFutureVersions.exec(directory: d, ggLog: ggLog))
+        .thenAnswer((_) async {
+          messages.add('did check future versions');
+          return true;
+        });
   }
 
   // ...........................................................................
@@ -64,6 +70,7 @@ void main() {
       format: MockFormat(),
       tests: MockTests(),
       packageJsonScripts: MockCheckPackageJsonScripts(),
+      noFutureVersions: MockNoFutureVersions(),
     );
 
     commit = CanCommit(ggLog: ggLog, checks: commands);
@@ -91,8 +98,8 @@ void main() {
 
     group('Commit', () {
       group('run(directory)', () {
-        test('should run pub get, analyze, format, build and coverage '
-            'in that order', () async {
+        test('should run pub get, analyze, format, build, coverage and the '
+            'future-versions check in that order', () async {
           await addAndCommitSampleFile(d);
           await commit.exec(directory: d, ggLog: ggLog);
           expect(messages[0], 'did pub get');
@@ -100,6 +107,7 @@ void main() {
           expect(messages[2], 'did format');
           expect(messages[3], 'did build');
           expect(messages[4], 'did cover');
+          expect(messages[5], 'did check future versions');
         });
       });
     });
