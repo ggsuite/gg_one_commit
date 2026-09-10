@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.5.0 - 2026-09-11
+
+### Added
+
+- `can commit` fails when `CHANGELOG.md` lists a version above the manifest version
+
+### Fixed
+
+- The Node upgrade and the repository url lookup skip a `package.json` without a valid `name`
+
 ## 2.4.1 - 2026-09-09
 
 ### Changed
