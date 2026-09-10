@@ -50,10 +50,10 @@ Future<String> _readFromPubspec(Directory directory) async {
 // .............................................................................
 Future<String> _readFromPackageJson(Directory directory) async {
   final raw = await File('${directory.path}/package.json').readAsString();
-  final decoded = jsonDecode(raw);
-  if (decoded is! Map<String, dynamic>) {
-    throw Exception(cError('package.json is not a JSON object.'));
-  }
+  // Only reached for a TypeScript project, and `detectProjectType` reports
+  // one only when package.json is an npm manifest — a JSON object with a
+  // name. So the cast holds.
+  final decoded = jsonDecode(raw) as Map<String, dynamic>;
 
   final repository = decoded['repository'];
   final url = switch (repository) {

@@ -71,7 +71,9 @@ class DoUpgradeDeps extends DirCommand<void> {
 
     // Each manifest is looked at on its own, so a hybrid upgrades both sides.
     final hasPubspec = File('${directory.path}/pubspec.yaml').existsSync();
-    final hasPackageJson = File('${directory.path}/package.json').existsSync();
+    // A package.json without a `name` is no npm manifest — a leftover in a
+    // Dart repo, not a second ecosystem to upgrade.
+    final hasPackageJson = hasNpmManifest(directory);
 
     if (!hasPubspec && !hasPackageJson) {
       ggLog(

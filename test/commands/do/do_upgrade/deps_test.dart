@@ -300,6 +300,31 @@ void main() {
           );
         });
 
+        test(
+          'is skipped for a Dart repo next to a nameless package.json',
+          () async {
+            // A package.json without a name is no npm manifest — a leftover in
+            // a Dart repo, not a second ecosystem. Only the Dart side moves.
+            File('${d.path}/package.json').writeAsStringSync('{}');
+
+            await doUpgrade.exec(directory: d, ggLog: ggLog);
+
+            expect(
+              messages.join('\n'),
+              contains('✓ Run »dart pub upgrade --major-versions --tighten«'),
+            );
+            verifyNever(
+              () => processWrapper.run(
+                'pnpm',
+                any(),
+                workingDirectory: any(named: 'workingDirectory'),
+                runInShell: any(named: 'runInShell'),
+                environment: any(named: 'environment'),
+              ),
+            );
+          },
+        );
+
         test('and the dart side both run for a hybrid', () async {
           // The whole point: a hybrid has two ecosystems, so both move.
           writePackageJson();

@@ -98,7 +98,9 @@ void main() {
         );
       });
 
-      test('throws when package.json is not a JSON object', () async {
+      test('throws when package.json is no npm manifest', () async {
+        // A package.json that is not a JSON object with a name is no
+        // manifest, so the project has none — not even a TypeScript one.
         writeTsProject('[1, 2, 3]');
         await expectLater(
           readRepositoryUrl(tmp),
@@ -106,7 +108,7 @@ void main() {
             isA<Exception>().having(
               (e) => rmControls(e.toString()),
               'message',
-              contains('not a JSON object'),
+              contains('the project has no manifest'),
             ),
           ),
         );
