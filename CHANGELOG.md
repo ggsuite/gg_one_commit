@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.6.0 - 2026-09-11
+
+### Fixed
+
+- `gg one do create ticket` moves unpushed commits relative to the repository's default branch instead of `origin/main`
+
 ## 2.5.0 - 2026-09-11
 
 ### Added

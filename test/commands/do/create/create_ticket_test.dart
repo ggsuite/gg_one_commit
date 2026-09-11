@@ -9,6 +9,7 @@ import 'dart:io';
 
 import 'package:args/command_runner.dart';
 import 'package:gg_git/gg_git.dart';
+import 'package:gg_git/gg_git_test_helpers.dart';
 import 'package:gg_one_commit/gg_one_commit.dart';
 import 'package:gg_process/gg_process.dart';
 import 'package:gg_status_printer/gg_status_printer.dart';
@@ -23,6 +24,7 @@ void main() {
   late CreateTicket createTicket;
   late MockCanCheckout canCheckout;
   late MockIsPushed isPushed;
+  late MockDefaultBranch defaultBranch;
   late MockGgProcessWrapper processWrapper;
 
   setUp(() async {
@@ -31,12 +33,14 @@ void main() {
     registerFallbackValue(d);
     canCheckout = MockCanCheckout();
     isPushed = MockIsPushed();
+    defaultBranch = MockDefaultBranch();
     processWrapper = MockGgProcessWrapper();
     canCheckout.mockExec(result: null, directory: d, ggLog: ggLog);
     createTicket = CreateTicket(
       ggLog: ggLog,
       canCheckout: canCheckout,
       isPushed: isPushed,
+      defaultBranch: defaultBranch,
       processWrapper: processWrapper,
     );
     runner = CommandRunner<void>('gg', 'gg')..addCommand(createTicket);
@@ -63,6 +67,12 @@ void main() {
     mockGitCommand(['stash', 'pop']);
   }
 
+  /// Mocks the name the repository reports as its default branch.
+  void mockDefaultBranch(String name) {
+    when(() => defaultBranch.get(directory: d, ggLog: ggLog))
+        .thenAnswer((_) async => name);
+  }
+
   group('CreateTicket', () {
     test('should execute CanCheckout before git commands', () async {
       when(
@@ -85,7 +95,8 @@ void main() {
       verify(() => canCheckout.exec(directory: d, ggLog: ggLog)).called(1);
     });
 
-    test('should reset soft when unpushed commits exist', () async {
+    test('should reset soft onto the remote default branch when unpushed '
+        'commits exist', () async {
       when(
         () => isPushed.get(
           directory: d,
@@ -94,7 +105,8 @@ void main() {
         ),
       ).thenAnswer((_) async => false);
 
-      mockGitCommand(['reset', '--soft', 'origin/main']);
+      mockDefaultBranch('develop');
+      mockGitCommand(['reset', '--soft', 'origin/develop']);
       mockStash('feat_test');
       mockGitCommand(['checkout', '-b', 'feat_test']);
 
@@ -116,7 +128,7 @@ void main() {
         () => processWrapper.run('git', [
           'reset',
           '--soft',
-          'origin/main',
+          'origin/develop',
         ], workingDirectory: d.path),
       ).called(1);
       verify(
@@ -162,11 +174,17 @@ void main() {
 
       verify(() => canCheckout.exec(directory: d, ggLog: ggLog)).called(1);
       verifyNever(
-        () => processWrapper.run('git', [
-          'reset',
-          '--soft',
-          'origin/main',
-        ], workingDirectory: d.path),
+        () => defaultBranch.get(
+          directory: any(named: 'directory'),
+          ggLog: any(named: 'ggLog'),
+        ),
+      );
+      verifyNever(
+        () => processWrapper.run(
+          'git',
+          any(that: contains('reset')),
+          workingDirectory: d.path,
+        ),
       );
       verify(
         () => processWrapper.run('git', [
@@ -189,6 +207,137 @@ void main() {
           'pop',
         ], workingDirectory: d.path),
       ).called(1);
+    });
+
+    test('should throw when unpushed commits exist but the repository has no '
+        'default branch', () async {
+      when(
+        () => isPushed.get(
+          directory: d,
+          ggLog: ggLog,
+          ignoreUnCommittedChanges: true,
+        ),
+      ).thenAnswer((_) async => false);
+
+      mockDefaultBranch('');
+
+      await expectLater(
+        () => createTicket.exec(
+          directory: d,
+          ggLog: ggLog,
+          branchName: 'feat_test',
+        ),
+        throwsA(
+          isA<Exception>().having(
+            (e) => rmControls(e.toString()),
+            'toString()',
+            'Exception: No default branch found (origin/HEAD, main, master).',
+          ),
+        ),
+      );
+
+      verifyNever(
+        () => processWrapper.run(
+          'git',
+          any(),
+          workingDirectory: any(named: 'workingDirectory'),
+        ),
+      );
+    });
+
+    test('should throw when the soft reset fails', () async {
+      when(
+        () => isPushed.get(
+          directory: d,
+          ggLog: ggLog,
+          ignoreUnCommittedChanges: true,
+        ),
+      ).thenAnswer((_) async => false);
+
+      mockDefaultBranch('develop');
+      mockGitCommand(
+        ['reset', '--soft', 'origin/develop'],
+        exitCode: 1,
+        stderr: 'Reset error',
+      );
+
+      await expectLater(
+        () => createTicket.exec(
+          directory: d,
+          ggLog: ggLog,
+          branchName: 'feat_test',
+        ),
+        throwsA(
+          isA<Exception>().having(
+            (e) => rmControls(e.toString()),
+            'toString()',
+            'Exception: git reset --soft origin/develop failed: Reset error',
+          ),
+        ),
+      );
+
+      verifyNever(
+        () => processWrapper.run('git', [
+          'stash',
+          'create',
+        ], workingDirectory: d.path),
+      );
+    });
+
+    test('should move unpushed commits into the ticket branch of a repository '
+        'whose default branch is develop', () async {
+      // A remote whose only branch is »develop« — there is no »main« at all.
+      final remote = await initTestDir();
+      await remote.create(recursive: true);
+      await _git(remote, ['init', '--bare', '--initial-branch=develop']);
+
+      final local = await initTestDir();
+      await _git(local, ['init', '--initial-branch=develop']);
+      await _git(local, ['config', 'user.email', 'test@example.com']);
+      await _git(local, ['config', 'user.name', 'Test']);
+      await _git(local, ['remote', 'add', 'origin', remote.path]);
+      await addAndCommitSampleFile(local, fileName: 'init', content: 'init');
+      await _git(local, ['push', '--set-upstream', 'origin', 'develop']);
+      await _git(local, ['remote', 'set-head', 'origin', '--auto']);
+
+      // A commit that was made on develop but never pushed
+      await addAndCommitSampleFile(
+        local,
+        fileName: 'unpushed.txt',
+        content: 'unpushed',
+      );
+      final pushedHead = await _gitOut(local, ['rev-parse', 'origin/develop']);
+      final unpushedHead = await _gitOut(local, ['rev-parse', 'HEAD']);
+      expect(unpushedHead, isNot(pushedHead));
+
+      canCheckout.mockExec(result: null, directory: local, ggLog: ggLog);
+      final realCreateTicket = CreateTicket(
+        ggLog: ggLog,
+        canCheckout: canCheckout,
+        isPushed: IsPushed(ggLog: ggLog),
+        defaultBranch: DefaultBranch(ggLog: ggLog),
+      );
+
+      await realCreateTicket.exec(
+        directory: local,
+        ggLog: ggLog,
+        branchName: 'feat_develop',
+        message: 'Ticket on develop',
+      );
+
+      // The ticket branch is checked out and starts at origin/develop
+      expect(await branchName(local), 'feat_develop');
+      expect(await _gitOut(local, ['rev-parse', 'HEAD']), pushedHead);
+
+      // The unpushed commit's changes survived as local changes
+      expect(File('${local.path}/unpushed.txt').readAsStringSync(), 'unpushed');
+      expect(File('${local.path}/ticket.json').existsSync(), isTrue);
+
+      // The stash stack is empty again
+      expect(await _gitOut(local, ['stash', 'list']), isEmpty);
+
+      await local.delete(recursive: true);
+      await remote.delete(recursive: true);
     });
 
     test('should support CLI usage', () async {
@@ -560,3 +709,14 @@ void main() {
 }
 
 class MockGgProcessWrapper extends Mock implements GgProcessWrapper {}
+
+/// Runs a git command in [dir] and throws when it fails.
+Future<String> _gitOut(Directory dir, List<String> args) async {
+  final result = await Process.run('git', args, workingDirectory: dir.path);
+  if (result.exitCode != 0) {
+    throw Exception('git ${args.join(' ')} failed: ${result.stderr}');
+  }
+  return (result.stdout as String).trim();
+}
+
+Future<void> _git(Directory dir, List<String> args) => _gitOut(dir, args);
