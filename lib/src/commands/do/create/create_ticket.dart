@@ -26,16 +26,19 @@ class CreateTicket extends DirCommand<void> {
     super.description = 'Create a ticket branch and reapply local changes',
     CanCheckout? canCheckout,
     IsPushed? isPushed,
+    DefaultBranch? defaultBranch,
     this._processWrapper = const GgProcessWrapper(),
     // coverage:ignore-start
   }) : _canCheckout = canCheckout ?? CanCheckout(ggLog: ggLog),
-       _isPushed = isPushed ?? IsPushed(ggLog: ggLog) {
+       _isPushed = isPushed ?? IsPushed(ggLog: ggLog),
+       _defaultBranch = defaultBranch ?? DefaultBranch(ggLog: ggLog) {
     // coverage:ignore-end
     _addArgs();
   }
 
   final CanCheckout _canCheckout;
   final IsPushed _isPushed;
+  final DefaultBranch _defaultBranch;
   final GgProcessWrapper _processWrapper;
 
   @override
@@ -104,6 +107,11 @@ class CreateTicket extends DirCommand<void> {
   }
 
   /// Stashes local changes, performs the checkout, and reapplies the stash.
+  ///
+  /// Commits that were not pushed to the default branch yet are moved into
+  /// the ticket branch: they are undone with a soft reset onto the remote
+  /// default branch, land in the stash together with the other local changes
+  /// and are reapplied on the new branch.
   Future<void> _stashChangesAndCheckout({
     required Directory directory,
     required GgLog ggLog,
@@ -117,11 +125,7 @@ class CreateTicket extends DirCommand<void> {
     );
 
     if (!everythingIsPushed) {
-      await _runGitCommand(
-        directory: directory,
-        args: ['reset', '--soft', 'origin/main'],
-        errorMessage: 'git reset --soft origin/main failed',
-      );
+      await _resetToRemoteDefaultBranch(directory: directory, ggLog: ggLog);
     }
 
     final hasStash = await _stashChanges(
@@ -146,6 +150,36 @@ class CreateTicket extends DirCommand<void> {
       directory: directory,
       branchName: branchName,
       message: message,
+    );
+  }
+
+  /// Undoes the unpushed commits with a soft reset onto the remote default
+  /// branch, keeping their changes in the index.
+  ///
+  /// The default branch is whatever the repository declares — `main`,
+  /// `master`, `develop` or anything else — so it is looked up instead of
+  /// assumed.
+  Future<void> _resetToRemoteDefaultBranch({
+    required Directory directory,
+    required GgLog ggLog,
+  }) async {
+    final defaultBranch = await _defaultBranch.get(
+      directory: directory,
+      ggLog: ggLog,
+    );
+
+    if (defaultBranch.isEmpty) {
+      throw Exception(
+        cError('No default branch found (origin/HEAD, main, master).'),
+      );
+    }
+
+    final target = 'origin/$defaultBranch';
+
+    await _runGitCommand(
+      directory: directory,
+      args: ['reset', '--soft', target],
+      errorMessage: 'git reset --soft $target failed',
     );
   }
 

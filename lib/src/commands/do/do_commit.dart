@@ -240,7 +240,8 @@ class DoCommit extends DirCommand<void> {
   }
 
   // ...........................................................................
-  /// Throws when the current branch is »main« or »master«.
+  /// Throws when the current branch is the default branch (»main«, »master«
+  /// or whatever the repository declares) instead of a feature branch.
   ///
   /// Callers skip the guard when »--force« is given — the message names that
   /// escape hatch.
