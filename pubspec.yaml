@@ -29,4 +29,4 @@ dev_dependencies:
   gg_test: ^3.3.1
   gg_version: ^5.5.0
   dna_ggsuite: ^0.2.1
-  helix: ^1.7.1
+  helix: ^1.8.0
