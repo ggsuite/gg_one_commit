@@ -1,11 +1,11 @@
 # Changelog
 
-## Unreleased
+## 2.6.2 - 2026-09-22
 
 ### Changed
 
 - "Quiet
-- &quot;Tighten
+- "Tighten
 
 ## 2.6.1 - 2026-09-14
 
