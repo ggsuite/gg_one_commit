@@ -237,6 +237,88 @@ void main() {
             exception,
             contains('»dart pub upgrade« failed: Something went wrong'),
           );
+          // A real resolve error is not retried.
+          verify(
+            () => processWrapper.run('dart', any(), workingDirectory: d.path),
+          ).called(1);
+        });
+      });
+
+      group('- a git race on the pub cache', () {
+        const race =
+            'Git error. Command: `git fetch`\n'
+            "error: cannot lock ref 'refs/heads/main': is at bba3e72 "
+            'but expected 9a281fa';
+
+        /// Answers the upgrade with [exitCodes], one per call.
+        void mockUpgradeSequence(List<int> exitCodes, {String stderr = race}) {
+          var call = 0;
+          when(
+            () => processWrapper.run('dart', [
+              'pub',
+              'upgrade',
+              '--major-versions',
+              '--tighten',
+            ], workingDirectory: d.path),
+          ).thenAnswer((_) async {
+            final exitCode = exitCodes[call++];
+            if (exitCode == 0) await updateSampleFileWithoutCommitting(d);
+            return ProcessResult(0, exitCode, '', exitCode == 0 ? '' : stderr);
+          });
+        }
+
+        setUp(() {
+          doUpgrade = DoUpgradeDeps(
+            ggLog: ggLog,
+            state: state,
+            canUpgrade: canUpgrade,
+            processWrapper: processWrapper,
+            gitRaceRetryDelay: Duration.zero,
+          );
+        });
+
+        test('is retried until the upgrade succeeds', () async {
+          mockUpgradeSequence([1, 0]);
+
+          await doUpgrade.exec(directory: d, ggLog: ggLog);
+
+          expect(
+            messages[2],
+            contains('✓ Run »dart pub upgrade --major-versions --tighten«'),
+          );
+          verify(
+            () => processWrapper.run('dart', any(), workingDirectory: d.path),
+          ).called(2);
+        });
+
+        test('fails after the last attempt', () async {
+          mockUpgradeSequence([1, 1, 1]);
+
+          late String exception;
+          try {
+            await doUpgrade.exec(directory: d, ggLog: ggLog);
+          } catch (e) {
+            exception = rmControls(e.toString());
+          }
+
+          expect(exception, contains('cannot lock ref'));
+          verify(
+            () => processWrapper.run('dart', any(), workingDirectory: d.path),
+          ).called(3);
+        });
+
+        test('is detected in both of git\'s forms', () {
+          expect(DoUpgradeDeps.isGitCacheRace(race), isTrue);
+          expect(
+            DoUpgradeDeps.isGitCacheRace(
+              "fatal: Unable to create '/cache/x/shallow.lock': File exists.",
+            ),
+            isTrue,
+          );
+          expect(
+            DoUpgradeDeps.isGitCacheRace('Because x depends on y ...'),
+            isFalse,
+          );
         });
       });
 

@@ -43,6 +43,7 @@ class DoUpgradeDeps extends DirCommand<void> {
     GgState? state,
     CanUpgrade? canUpgrade,
     this._processWrapper = const GgProcessWrapper(),
+    this._gitRaceRetryDelay = const Duration(seconds: 2),
   }) : _state = state ?? GgState(ggLog: ggLog),
        _canUpgrade = canUpgrade ?? CanUpgrade(ggLog: ggLog) {
     _addParam();
@@ -134,6 +135,7 @@ class DoUpgradeDeps extends DirCommand<void> {
   // ...........................................................................
   final GgState _state;
   final GgProcessWrapper _processWrapper;
+  final Duration _gitRaceRetryDelay;
   final CanUpgrade _canUpgrade;
 
   // ...........................................................................
@@ -374,11 +376,29 @@ class DoUpgradeDeps extends DirCommand<void> {
       dark: true,
     ).logTask(
       task: () async {
-        final result = await _processWrapper.run(
+        var result = await _processWrapper.run(
           executable,
           args,
           workingDirectory: directory.path,
         );
+
+        // Every package shares one git mirror per git dependency in the pub
+        // cache. When a second pub process — typically the IDE's automatic
+        // »pub get« after gg rewrote a pubspec — fetches the same mirror at
+        // the same moment, git refuses to move the ref under the other
+        // fetch. The next attempt finds the mirror settled, so a race is
+        // retried instead of failing the whole flow.
+        for (var attempt = 1; attempt < _gitRaceAttempts; attempt++) {
+          if (result.exitCode == 0 || !isGitCacheRace('${result.stderr}')) {
+            break;
+          }
+          await Future<void>.delayed(_gitRaceRetryDelay);
+          result = await _processWrapper.run(
+            executable,
+            args,
+            workingDirectory: directory.path,
+          );
+        }
 
         if (result.exitCode != 0) {
           throw Exception(
@@ -391,6 +411,21 @@ class DoUpgradeDeps extends DirCommand<void> {
       success: (success) => success,
     );
   }
+
+  /// How often »pub upgrade« runs at most when git keeps reporting a race on
+  /// the pub cache.
+  static const int _gitRaceAttempts = 3;
+
+  // ...........................................................................
+  /// Whether [stderr] of a failed »pub upgrade« is a concurrent git fetch on
+  /// the pub cache's mirror of a git dependency, not a real resolve error.
+  ///
+  /// git reports the race in two ways: the ref moved under the fetch
+  /// (»cannot lock ref … is at X but expected Y«), or the other process still
+  /// holds the lock file (».lock': File exists«).
+  static bool isGitCacheRace(String stderr) =>
+      stderr.contains('cannot lock ref') ||
+      stderr.contains(".lock': File exists");
 
   // ...........................................................................
   bool get _majorVersionsFromArgs {
