@@ -1,6 +1,6 @@
 name: gg_one_commit
 description: "Daily repo flows of the gg_one tool family - committing, pushing, upgrading dependencies and creating ticket branches."
-version: 2.6.4
+version: 2.7.0
 repository: https://github.com/ggsuite/gg_one_commit.git
 
 environment:
@@ -11,7 +11,7 @@ dependencies:
   gg_args: ^3.2.0
   gg_changelog: ^2.2.1
   gg_console_colors: ^2.5.0
-  gg_git: ^4.4.2
+  gg_git: ^4.5.0
   gg_lang: ^0.8.1
   gg_log: ^1.2.0
   gg_one_core: ^2.9.0

@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.7.0 - 2026-09-25
+
+### Changed
+
+- Retry a push the remote dropped: do push runs its pushes through gg_git's GitRetry (transient transport errors such as a closed connection or GitHub's SSH throttling)
+
 ## 2.6.4 - 2026-09-24
 
 ### Changed

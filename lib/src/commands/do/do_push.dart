@@ -25,6 +25,7 @@ class DoPush extends DirCommand<void> {
     IsPushed? isPushed,
     CanPush? canPush,
     this._processWrapper = const GgProcessWrapper(),
+    this._gitRetry = const GitRetry(),
     GgState? state,
     UpstreamBranch? upstreamBranch,
     LocalBranch? localBranch,
@@ -107,6 +108,7 @@ class DoPush extends DirCommand<void> {
 
   // ...........................................................................
   final GgProcessWrapper _processWrapper;
+  final GitRetry _gitRetry;
   final IsPushed _isPushedViaGit;
   final CanPush _canPush;
 
@@ -143,11 +145,15 @@ class DoPush extends DirCommand<void> {
     bool pushTags,
     Directory directory,
   ) async {
-    final result = await _processWrapper.run('git', [
-      'push',
-      if (force) '-f',
-      if (pushTags) '--tags', // coverage:ignore-line
-    ], workingDirectory: directory.path);
+    final result = await _gitRetry.run(
+      () => _processWrapper.run('git', [
+        'push',
+        if (force) '-f',
+        if (pushTags) '--tags', // coverage:ignore-line
+      ], workingDirectory: directory.path),
+      ggLog: ggLog,
+      description: 'git push',
+    );
 
     if (result.exitCode != 0) {
       throw Exception(cError('git push failed: ${result.stderr}'));
@@ -170,12 +176,16 @@ class DoPush extends DirCommand<void> {
       directory: directory,
     );
 
-    final result = await _processWrapper.run('git', [
-      'push',
-      '--set-upstream',
-      'origin',
-      localBranch,
-    ], workingDirectory: directory.path);
+    final result = await _gitRetry.run(
+      () => _processWrapper.run('git', [
+        'push',
+        '--set-upstream',
+        'origin',
+        localBranch,
+      ], workingDirectory: directory.path),
+      ggLog: ggLog,
+      description: 'git push --set-upstream origin $localBranch',
+    );
 
     if (result.exitCode != 0) {
       throw Exception(
