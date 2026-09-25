@@ -9,4 +9,4 @@
 // coverage:ignore-file
 
 /// The version of the `gg_one_commit` package.
-const String ggOneCommitVersion = '2.6.4';
+const String ggOneCommitVersion = '2.7.0';
