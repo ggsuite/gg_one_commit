@@ -241,6 +241,110 @@ void main() async {
         });
       });
 
+      group('and retry', () {
+        const dropped = 'Connection to github.com closed by remote host.';
+
+        /// Answers »git push« with [exitCodes], one per call.
+        MockGgProcessWrapper mockPushSequence(
+          List<int> exitCodes, {
+          List<String> args = const ['push'],
+        }) {
+          final processWrapper = MockGgProcessWrapper();
+          var call = 0;
+          when(
+            () =>
+                processWrapper.run('git', args, workingDirectory: dLocal.path),
+          ).thenAnswer((_) async {
+            final exitCode = exitCodes[call++];
+            return ProcessResult(1, exitCode, '', exitCode == 0 ? '' : dropped);
+          });
+          return processWrapper;
+        }
+
+        test('a push the remote dropped, until it succeeds', () async {
+          final processWrapper = mockPushSequence([1, 0]);
+          await updateAndCommitSampleFile(dLocal);
+          mockCanPush(true);
+
+          final doPush = DoPush(
+            ggLog: ggLog,
+            canPush: canPush,
+            processWrapper: processWrapper,
+            gitRetry: GitRetry.example,
+          );
+          await doPush.exec(directory: dLocal, ggLog: ggLog);
+
+          verify(
+            () => processWrapper.run('git', [
+              'push',
+            ], workingDirectory: dLocal.path),
+          ).called(2);
+          expect(
+            messages,
+            anyElement(contains('git push failed with a transient network')),
+          );
+          expect(messages.last, 'Checks successful. Pushed successful.');
+        });
+
+        test('creating an upstream branch the remote dropped', () async {
+          const branchName = 'new-branch';
+          await createBranch(dLocal, branchName);
+          final processWrapper = mockPushSequence(
+            [1, 0],
+            args: ['push', '--set-upstream', 'origin', branchName],
+          );
+          await updateAndCommitSampleFile(dLocal);
+          mockCanPush(true);
+
+          final doPush = DoPush(
+            ggLog: ggLog,
+            canPush: canPush,
+            processWrapper: processWrapper,
+            gitRetry: GitRetry.example,
+          );
+          await doPush.exec(directory: dLocal, ggLog: ggLog);
+
+          verify(
+            () => processWrapper.run('git', [
+              'push',
+              '--set-upstream',
+              'origin',
+              branchName,
+            ], workingDirectory: dLocal.path),
+          ).called(2);
+          expect(
+            messages,
+            anyElement(contains('origin $branchName failed with a transient')),
+          );
+        });
+
+        test('and give up when the remote keeps dropping the push', () async {
+          final processWrapper = mockPushSequence([1, 1, 1]);
+          await updateAndCommitSampleFile(dLocal);
+          mockCanPush(true);
+
+          final doPush = DoPush(
+            ggLog: ggLog,
+            canPush: canPush,
+            processWrapper: processWrapper,
+            gitRetry: GitRetry.example,
+          );
+          late String exception;
+          try {
+            await doPush.exec(directory: dLocal, ggLog: ggLog);
+          } catch (e) {
+            exception = rmControls(e.toString());
+          }
+
+          expect(exception, 'Exception: git push failed: $dropped');
+          verify(
+            () => processWrapper.run('git', [
+              'push',
+            ], workingDirectory: dLocal.path),
+          ).called(3);
+        });
+      });
+
       group('should throw', () {
         test('when canPush throws', () async {
           // Make a change that could be pushed
@@ -292,6 +396,13 @@ void main() async {
           }
 
           expect(exception, 'Exception: git push failed: Some error');
+
+          // A real error is not retried.
+          verify(
+            () => processWrapper.run('git', [
+              'push',
+            ], workingDirectory: dLocal.path),
+          ).called(1);
         });
 
         test('when creating an upstream branch fails', () async {
