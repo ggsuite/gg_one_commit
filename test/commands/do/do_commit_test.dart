@@ -930,4 +930,144 @@ void main() {
       expect(messages.last, '✓ Committed');
     });
   });
+
+  group('DoCommit when nothing but gg commits were contributed', () {
+    late Directory dGg;
+
+    // .......................................................................
+    /// Returns the subject of the HEAD commit of [dir].
+    Future<String> headSubject(Directory dir) async {
+      final result = await Process.run('git', [
+        'log',
+        '-1',
+        '--format=%s',
+      ], workingDirectory: dir.path);
+      return result.stdout.toString().trim();
+    }
+
+    // .......................................................................
+    setUp(() async {
+      messages.clear();
+      dGg = await Directory.systemTemp.createTemp();
+      await initGit(dGg);
+      await addAndCommitSampleFile(
+        dGg,
+        fileName: 'CHANGELOG.md',
+        content: '# Changelog',
+      );
+      await addAndCommitSampleFile(
+        dGg,
+        fileName: 'pubspec.yaml',
+        content:
+            'version: 1.0.0\n'
+            'repository:https://github.com/inlavigo/gg.git',
+      );
+
+      // The state a cloned repo is in — the branch gg compares against.
+      await Process.run('git', [
+        'update-ref',
+        'refs/remotes/origin/main',
+        'main',
+      ], workingDirectory: dGg.path);
+
+      await createBranch(dGg, 'feature');
+    });
+
+    tearDown(() async {
+      await dGg.delete(recursive: true);
+    });
+
+    // .......................................................................
+    test('nothing is committed and »✓ Nothing to commit« is logged', () async {
+      // A system commit, and nothing else, on the feature branch
+      await addFileWithoutCommitting(
+        dGg,
+        fileName: 'pubspec.yaml',
+        content:
+            'version: 1.0.0\n'
+            'repository:https://github.com/inlavigo/gg.git\n'
+            'homepage:https://inlavigo.com',
+      );
+      await commitFile(dGg, 'pubspec.yaml', message: '#gg: dart pub get');
+
+      await doCommit.exec(
+        directory: dGg,
+        ggLog: ggLog,
+        message: 'My commit',
+        logType: LogType.added,
+      );
+
+      expect(messages.last, '✓ Nothing to commit');
+
+      // No CHANGELOG entry was invented ...
+      expect(
+        await File('${dGg.path}/CHANGELOG.md').readAsString(),
+        '# Changelog',
+      );
+
+      // ... and no commit carries one. A commit under the user's message
+      // would make »PublishSkipCheck« release a repo nobody edited.
+      expect(await headSubject(dGg), '#gg: dart pub get');
+
+      // The state is recorded, so the gates downstream stay green
+      await doCommit.exec(
+        directory: dGg,
+        ggLog: ggLog,
+        message: 'My commit',
+        logType: LogType.added,
+      );
+      expect(messages.last, '✓ Committed');
+    });
+
+    // .......................................................................
+    // .........................................................................
+    test('»--force« writes the changelog anyway', () async {
+      // The escape hatch for what the rule cannot see: a release a
+      // dependency bump forces, or a changelog repaired on main.
+      await addFileWithoutCommitting(
+        dGg,
+        fileName: 'pubspec.yaml',
+        content:
+            'version: 1.0.0\n'
+            'repository:https://github.com/inlavigo/gg.git\n'
+            'homepage:https://inlavigo.com',
+      );
+      await commitFile(dGg, 'pubspec.yaml', message: '#gg: dart pub get');
+
+      await doCommit.exec(
+        directory: dGg,
+        ggLog: ggLog,
+        message: 'My commit',
+        logType: LogType.added,
+        force: true,
+      );
+
+      expect(
+        await File('${dGg.path}/CHANGELOG.md').readAsString(),
+        contains('My commit'),
+      );
+    });
+
+    test('the changelog is still written when manual work was '
+        'contributed', () async {
+      await addAndCommitSampleFile(
+        dGg,
+        fileName: 'lib.dart',
+        content: 'void main() {}',
+        message: 'Manual work',
+      );
+
+      await doCommit.exec(
+        directory: dGg,
+        ggLog: ggLog,
+        message: 'My commit',
+        logType: LogType.added,
+      );
+
+      expect(
+        await File('${dGg.path}/CHANGELOG.md').readAsString(),
+        contains('My commit'),
+      );
+    });
+  });
 }
