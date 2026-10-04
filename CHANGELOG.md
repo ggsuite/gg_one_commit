@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.8.0 - 2026-10-04
+
+### Changed
+
+- `gg do commit` does nothing when the working tree is clean and every commit
+the ticket contributes is a gg system commit: no CHANGELOG entry is invented
+and no commit under the user's message is written, which used to keep
+`PublishSkipCheck` from skipping a release nobody needed. `--force` writes the
+entry anyway — the escape hatch for a release a dependency bump forces, or a
+changelog repaired on the default branch
+
 ## 2.7.2 - 2026-09-30
 
 ## 2.7.1 - 2026-09-28

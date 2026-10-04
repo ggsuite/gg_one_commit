@@ -55,7 +55,9 @@ class DoCommit extends DirCommand<void> {
     cl.Add? addToChangeLog,
     IsFeatureBranch? isFeatureBranch,
     LocalBranch? localBranch,
-  }) : _isFeatureBranch = isFeatureBranch ?? IsFeatureBranch(ggLog: ggLog),
+    ContributedCommits? contributedCommits,
+  }) : _contributedCommits = contributedCommits ?? ContributedCommits(),
+       _isFeatureBranch = isFeatureBranch ?? IsFeatureBranch(ggLog: ggLog),
        _localBranch = localBranch ?? LocalBranch(ggLog: ggLog),
        _isGitCommitted = isCommitted ?? IsCommitted(ggLog: ggLog),
        _canCommit = canCommit ?? CanCommit(ggLog: ggLog),
@@ -159,6 +161,28 @@ class DoCommit extends DirCommand<void> {
       await _canCommit.exec(directory: directory, ggLog: ggLog);
     }
 
+    // Nothing to record: the tree is clean and everything this ticket
+    // contributes is gg's own bookkeeping. A CHANGELOG entry written here
+    // would be the first thing in the repo that looks like work — and the
+    // commit carrying it would keep `PublishSkipCheck` from skipping a
+    // release nobody needs. The state is still written: a clean tree gg
+    // itself committed answers »is everything committed?« with yes.
+    //
+    // »--force« writes the entry anyway — it is the escape hatch for the
+    // cases this rule cannot see: a release a dependency bump forces, or a
+    // changelog someone repairs on the default branch, where there are no
+    // contributed commits at all.
+    if (force != true && isCommittedViaGit) {
+      final manualReason = await _contributedCommits.manualCommitReason(
+        directory: directory,
+      );
+      if (manualReason == null) {
+        ggLog(cDetail('✓ Nothing to commit'));
+        await state.writeSuccess(directory: directory, key: stateKey);
+        return;
+      }
+    }
+
     // Update changelog when a message is given
     updateChangeLog ??= argResults?['log'] as bool? ?? true;
     if (updateChangeLog && supportsChangeLog) {
@@ -207,6 +231,7 @@ class DoCommit extends DirCommand<void> {
 
   // ...........................................................................
   final GgProcessWrapper _processWrapper;
+  final ContributedCommits _contributedCommits;
   final IsFeatureBranch _isFeatureBranch;
   final LocalBranch _localBranch;
   final IsCommitted _isGitCommitted;
