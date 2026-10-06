@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Upgrade dependencies
+
 ## 2.8.0 - 2026-10-04
 
 ### Changed
