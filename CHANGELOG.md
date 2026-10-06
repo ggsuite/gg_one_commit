@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.8.2 - 2026-10-06
+
+### Changed
+
+- Merge main
+- Upgrade_dependencies
+
 ## 2.8.1 - 2026-10-06
 
 ### Changed
