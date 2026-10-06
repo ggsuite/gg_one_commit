@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.8.1 - 2026-10-06
+
+### Changed
+
+- Upgrade dependencies
+
 ## 2.8.0 - 2026-10-04
 
 ### Changed
