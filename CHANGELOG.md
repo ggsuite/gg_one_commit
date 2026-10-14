@@ -5,6 +5,7 @@
 ### Fixed
 
 - Fix invalid YAML in the do commit test fixtures
+## 2.8.3 - 2026-10-14
 
 ## 2.8.2 - 2026-10-06
 
