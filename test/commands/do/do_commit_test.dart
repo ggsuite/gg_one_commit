@@ -960,7 +960,7 @@ void main() {
         fileName: 'pubspec.yaml',
         content:
             'version: 1.0.0\n'
-            'repository:https://github.com/inlavigo/gg.git',
+            'repository: https://github.com/inlavigo/gg.git',
       );
 
       // The state a cloned repo is in — the branch gg compares against.
@@ -985,8 +985,8 @@ void main() {
         fileName: 'pubspec.yaml',
         content:
             'version: 1.0.0\n'
-            'repository:https://github.com/inlavigo/gg.git\n'
-            'homepage:https://inlavigo.com',
+            'repository: https://github.com/inlavigo/gg.git\n'
+            'homepage: https://inlavigo.com',
       );
       await commitFile(dGg, 'pubspec.yaml', message: '#gg: dart pub get');
 
@@ -1029,8 +1029,8 @@ void main() {
         fileName: 'pubspec.yaml',
         content:
             'version: 1.0.0\n'
-            'repository:https://github.com/inlavigo/gg.git\n'
-            'homepage:https://inlavigo.com',
+            'repository: https://github.com/inlavigo/gg.git\n'
+            'homepage: https://inlavigo.com',
       );
       await commitFile(dGg, 'pubspec.yaml', message: '#gg: dart pub get');
 
