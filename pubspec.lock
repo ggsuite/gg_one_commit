@@ -357,7 +357,7 @@ packages:
       path: "../gg_one_core"
       relative: true
     source: path
-    version: "2.12.1"
+    version: "2.13.0"
   gg_process:
     dependency: "direct main"
     description:
