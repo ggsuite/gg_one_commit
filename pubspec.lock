@@ -364,10 +364,9 @@ packages:
   gg_one_core:
     dependency: "direct main"
     description:
-      name: gg_one_core
-      sha256: "25abedaf4ef885ed21f203aeb1f0c061cc8c00d181a28c296c6de3a06783c19f"
-      url: "https://pub.dev"
-    source: hosted
+      path: "../gg_one_core"
+      relative: true
+    source: path
     version: "2.13.1"
   gg_process:
     dependency: "direct main"
