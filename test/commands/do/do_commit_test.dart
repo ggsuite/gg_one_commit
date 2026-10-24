@@ -1048,6 +1048,61 @@ void main() {
       );
     });
 
+    // .......................................................................
+    group('needsMessage(directory, ggLog, force)', () {
+      // A system commit, and nothing else, on the feature branch
+      Future<void> commitGgBookkeeping() async {
+        await addFileWithoutCommitting(
+          dGg,
+          fileName: 'pubspec.yaml',
+          content:
+              'version: 1.0.0\n'
+              'repository: https://github.com/inlavigo/gg.git\n'
+              'homepage: https://inlavigo.com',
+        );
+        await commitFile(dGg, 'pubspec.yaml', message: '#gg: dart pub get');
+      }
+
+      Future<bool> needsMessage({bool? force}) =>
+          doCommit.needsMessage(directory: dGg, ggLog: ggLog, force: force);
+
+      test('is true for uncommitted changes', () async {
+        await addFileWithoutCommitting(dGg, fileName: 'lib.dart');
+        expect(await needsMessage(), isTrue);
+      });
+
+      test('is true for manual work the command has not recorded', () async {
+        await addAndCommitSampleFile(
+          dGg,
+          fileName: 'lib.dart',
+          content: 'void main() {}',
+          message: 'Manual work',
+        );
+        expect(await needsMessage(), isTrue);
+      });
+
+      test(
+        'is false for gg\'s bookkeeping only, true with »--force«',
+        () async {
+          await commitGgBookkeeping();
+          expect(await needsMessage(), isFalse);
+          expect(await needsMessage(force: true), isTrue);
+        },
+      );
+
+      test('is false once the command committed the repo', () async {
+        await addFileWithoutCommitting(dGg, fileName: 'lib.dart');
+        await doCommit.exec(
+          directory: dGg,
+          ggLog: ggLog,
+          message: 'My commit',
+          logType: LogType.added,
+        );
+        expect(await needsMessage(), isFalse);
+        expect(await needsMessage(force: true), isFalse);
+      });
+    });
+
     test('the changelog is still written when manual work was '
         'contributed', () async {
       await addAndCommitSampleFile(

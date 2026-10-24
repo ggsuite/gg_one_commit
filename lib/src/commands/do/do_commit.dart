@@ -208,6 +208,35 @@ class DoCommit extends DirCommand<void> {
     await state.writeSuccess(directory: directory, key: stateKey);
   }
 
+  // ...........................................................................
+  /// Whether [get] uses a commit message for [directory]: it does for
+  /// uncommitted changes, and for commits this command has not recorded
+  /// that need a CHANGELOG entry - with [force] always then. A repo the
+  /// command committed already needs none, nor one whose commits are gg's
+  /// own bookkeeping only.
+  Future<bool> needsMessage({
+    required Directory directory,
+    required GgLog ggLog,
+    bool? force,
+  }) async {
+    if (!await _isGitCommitted.get(directory: directory, ggLog: ggLog)) {
+      return true;
+    }
+
+    final isDone = await state.readSuccess(
+      directory: directory,
+      key: stateKey,
+      ggLog: ggLog,
+    );
+    if (isDone) return false;
+    if (force == true) return true;
+
+    final manualReason = await _contributedCommits.manualCommitReason(
+      directory: directory,
+    );
+    return manualReason != null;
+  }
+
   /// The state used to save the state of the command
   final GgState state;
 

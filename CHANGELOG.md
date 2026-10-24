@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Tell whether a commit needs a message
+
+DoCommit.needsMessage: uncommitted changes, or commits not recorded yet that need a CHANGELOG entry, always so with --force
+A repo DoCommit committed already needs none, nor one with gg's bookkeeping only
+
 ## 2.8.6 - 2026-10-19
 
 ## 2.8.5 - 2026-10-16
