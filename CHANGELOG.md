@@ -2,15 +2,14 @@
 
 ## Unreleased
 
+### Added
+
+- Add the blog post of ticket gg-1
+
 ### Changed
 
 - Tell whether a commit needs a message
 - Tighten dependency constraints only on request
-
-gg do upgrade deps no longer passes --tighten by default
---tighten (tighten: true) opts in; only the publish flows use it
-With local overrides pub crashes when it tightens against a sibling newer than the constraint
-Upgrade dna_ggsuite to ^1.0.0
 
 ## 2.8.6 - 2026-10-19
 
