@@ -5,9 +5,12 @@
 ### Changed
 
 - Tell whether a commit needs a message
+- Tighten dependency constraints only on request
 
-DoCommit.needsMessage: uncommitted changes, or commits not recorded yet that need a CHANGELOG entry, always so with --force
-A repo DoCommit committed already needs none, nor one with gg's bookkeeping only
+gg do upgrade deps no longer passes --tighten by default
+--tighten (tighten: true) opts in; only the publish flows use it
+With local overrides pub crashes when it tightens against a sibling newer than the constraint
+Upgrade dna_ggsuite to ^1.0.0
 
 ## 2.8.6 - 2026-10-19
 
