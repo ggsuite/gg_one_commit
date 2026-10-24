@@ -22,7 +22,7 @@ import 'package:mocktail/mocktail.dart';
 /// Upgrades all dependencies of the package — **every ecosystem it has**.
 ///
 /// - a `pubspec.yaml` is upgraded with »dart pub upgrade [--major-versions]
-///   --tighten« (»flutter pub upgrade …« in a Flutter repo)
+///   [--tighten]« (»flutter pub upgrade …« in a Flutter repo)
 /// - a `package.json` is upgraded with the project's package manager
 ///   (»pnpm update [--latest]«, »yarn upgrade [--latest]«, »npm update«)
 ///
@@ -30,6 +30,13 @@ import 'package:mocktail/mocktail.dart';
 /// manifests — runs both. Before, the command returned early without a
 /// `pubspec.yaml`, so a TypeScript repository was never upgraded at all and a
 /// hybrid only ever saw its Dart side move.
+///
+/// `--tighten` is off by default; only the publish turns it on. In a ticket
+/// workspace `pubspec_overrides.yaml` points the siblings at their local
+/// checkouts, and pub tightens the lower bound to the overridden version
+/// while it keeps the old upper bound — an impossible range pub crashes on
+/// (»Minimum version must be less than maximum«). The publish removes the
+/// overrides first, so its constraints are tightened against the registry.
 ///
 /// The upgrade itself runs no checks — the flows that call it (`gg do push`,
 /// `gg do publish`) run `gg can commit` right afterwards, so validating here
@@ -55,8 +62,14 @@ class DoUpgradeDeps extends DirCommand<void> {
     required Directory directory,
     required GgLog ggLog,
     bool? majorVersions,
+    bool? tighten,
     Map<String, dynamic> options = const {},
-  }) => get(directory: directory, ggLog: ggLog, majorVersions: majorVersions);
+  }) => get(
+    directory: directory,
+    ggLog: ggLog,
+    majorVersions: majorVersions,
+    tighten: tighten,
+  );
 
   // ...........................................................................
   @override
@@ -64,8 +77,10 @@ class DoUpgradeDeps extends DirCommand<void> {
     required Directory directory,
     required GgLog ggLog,
     bool? majorVersions,
+    bool? tighten,
   }) async {
     majorVersions ??= _majorVersionsFromArgs;
+    tighten ??= _tightenFromArgs;
 
     // Does directory exist?
     await check(directory: directory);
@@ -99,13 +114,14 @@ class DoUpgradeDeps extends DirCommand<void> {
     // skip »--tighten« exactly when the bounds are loose but the versions are
     // current.
     //
-    // Dart goes first: its »pub upgrade --tighten« rewrites pubspec.lock, and
-    // a hybrid's npm lifecycle scripts may shell into the Dart side, which
+    // Dart goes first: its »pub upgrade« rewrites pubspec.lock, and a
+    // hybrid's npm lifecycle scripts may shell into the Dart side, which
     // should then already be resolved.
     if (hasPubspec) {
       await _runDartPubUpgrade(
         directory: directory,
         majorVersions: majorVersions,
+        tighten: tighten,
       );
     }
 
@@ -145,6 +161,14 @@ class DoUpgradeDeps extends DirCommand<void> {
       abbr: 'm',
       help: 'Upgrade packages to their latest versions',
       defaultsTo: true,
+      negatable: true,
+    );
+    argParser.addFlag(
+      'tighten',
+      help:
+          'Raise the lower bounds of the constraints to the resolved '
+          'versions. Only for a release: with local overrides pub crashes.',
+      defaultsTo: false,
       negatable: true,
     );
   }
@@ -355,6 +379,7 @@ class DoUpgradeDeps extends DirCommand<void> {
   Future<void> _runDartPubUpgrade({
     required Directory directory,
     required bool majorVersions,
+    required bool tighten,
   }) async {
     // detectProjectType, not checkProjectType: the latter reports *any*
     // hybrid as typescript, so a hybrid Flutter repository would silently get
@@ -367,7 +392,7 @@ class DoUpgradeDeps extends DirCommand<void> {
       'pub',
       'upgrade',
       if (majorVersions) '--major-versions',
-      '--tighten',
+      if (tighten) '--tighten',
     ];
 
     await GgStatusPrinter<bool>(
@@ -432,6 +457,9 @@ class DoUpgradeDeps extends DirCommand<void> {
     final majorVersions = argResults?['major-versions'] as bool? ?? true;
     return majorVersions;
   }
+
+  // ...........................................................................
+  bool get _tightenFromArgs => argResults?['tighten'] as bool? ?? false;
 }
 
 /// Mock for [DoUpgradeDeps].
@@ -444,6 +472,7 @@ class MockDoUpgradeDeps extends MockDirCommand<void> implements DoUpgradeDeps {
     GgLog? ggLog,
     Directory? directory,
     bool? majorVersions,
+    bool? tighten,
     bool doThrow = false,
     String? message,
   }) {
@@ -457,6 +486,7 @@ class MockDoUpgradeDeps extends MockDirCommand<void> implements DoUpgradeDeps {
         ),
         ggLog: ggLog ?? any(named: 'ggLog'),
         majorVersions: majorVersions,
+        tighten: tighten,
       ),
     ).thenAnswer((invocation) async {
       return defaultReaction(
@@ -476,6 +506,7 @@ class MockDoUpgradeDeps extends MockDirCommand<void> implements DoUpgradeDeps {
     GgLog? ggLog,
     Directory? directory,
     bool? majorVersions,
+    bool? tighten,
     bool doThrow = false,
     String? message,
   }) {
@@ -489,6 +520,7 @@ class MockDoUpgradeDeps extends MockDirCommand<void> implements DoUpgradeDeps {
         ),
         ggLog: ggLog ?? any(named: 'ggLog'),
         majorVersions: majorVersions,
+        tighten: tighten,
       ),
     ).thenAnswer((invocation) async {
       return defaultReaction(

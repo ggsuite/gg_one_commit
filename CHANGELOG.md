@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Add the blog post of ticket gg-1
+
+### Changed
+
+- Tell whether a commit needs a message
+- Tighten dependency constraints only on request
+
 ## 2.8.6 - 2026-10-19
 
 ## 2.8.5 - 2026-10-16

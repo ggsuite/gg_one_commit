@@ -28,5 +28,5 @@ dev_dependencies:
   test: ^1.33.0
   gg_test: ^3.3.4
   gg_version: ^5.7.2
-  dna_ggsuite: ^0.5.0
+  dna_ggsuite: ^1.0.0
   helix: ^1.13.0

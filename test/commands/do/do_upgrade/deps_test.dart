@@ -56,6 +56,7 @@ void main() {
   // ...........................................................................
   void mockDartPubUpgrade({
     bool majorVersions = true,
+    bool tighten = false,
     int exitCode = 0,
     String stdout = '',
     String stderr = '',
@@ -67,7 +68,7 @@ void main() {
         'pub',
         'upgrade',
         if (majorVersions) '--major-versions',
-        '--tighten',
+        if (tighten) '--tighten',
       ], workingDirectory: d.path),
     ).thenAnswer((_) async {
       if (upgradingCausesChange) {
@@ -172,11 +173,11 @@ void main() {
           expect(messages[0], contains('✓ CanUpgrade'));
           expect(
             messages[1],
-            contains('⌛️ Run »dart pub upgrade --major-versions --tighten«'),
+            contains('⌛️ Run »dart pub upgrade --major-versions«'),
           );
           expect(
             messages[2],
-            contains('✓ Run »dart pub upgrade --major-versions --tighten«'),
+            contains('✓ Run »dart pub upgrade --major-versions«'),
           );
         }
 
@@ -188,6 +189,41 @@ void main() {
         test('- via CLI', () async {
           await runner.run(['deps', '-i', d.path]);
           check();
+        });
+      });
+
+      group('- should tighten the constraints only on request', () {
+        // In a ticket workspace the overrides point at the local checkouts,
+        // and pub crashes when it tightens against a sibling that is newer
+        // than the constraint. Only the publish asks for it.
+        setUp(() {
+          mockDartPubUpgrade(tighten: true);
+        });
+
+        void check() {
+          expect(
+            messages[2],
+            contains('✓ Run »dart pub upgrade --major-versions --tighten«'),
+          );
+        }
+
+        test('- programmatically', () async {
+          await doUpgrade.exec(directory: d, ggLog: ggLog, tighten: true);
+          check();
+        });
+
+        test('- via CLI', () async {
+          await runner.run(['deps', '-i', d.path, '--tighten']);
+          check();
+        });
+
+        test('- not with --no-tighten', () async {
+          mockDartPubUpgrade();
+          await runner.run(['deps', '-i', d.path, '--no-tighten']);
+          expect(
+            messages[2],
+            contains('✓ Run »dart pub upgrade --major-versions«'),
+          );
         });
       });
     });
@@ -258,7 +294,6 @@ void main() {
               'pub',
               'upgrade',
               '--major-versions',
-              '--tighten',
             ], workingDirectory: d.path),
           ).thenAnswer((_) async {
             final exitCode = exitCodes[call++];
@@ -284,7 +319,7 @@ void main() {
 
           expect(
             messages[2],
-            contains('✓ Run »dart pub upgrade --major-versions --tighten«'),
+            contains('✓ Run »dart pub upgrade --major-versions«'),
           );
           verify(
             () => processWrapper.run('dart', any(), workingDirectory: d.path),
@@ -393,7 +428,7 @@ void main() {
 
             expect(
               messages.join('\n'),
-              contains('✓ Run »dart pub upgrade --major-versions --tighten«'),
+              contains('✓ Run »dart pub upgrade --major-versions«'),
             );
             verifyNever(
               () => processWrapper.run(
@@ -415,10 +450,7 @@ void main() {
           await doUpgrade.exec(directory: d, ggLog: ggLog);
 
           final all = messages.join('\n');
-          expect(
-            all,
-            contains('✓ Run »dart pub upgrade --major-versions --tighten«'),
-          );
+          expect(all, contains('✓ Run »dart pub upgrade --major-versions«'));
           expect(all, contains('✓ Run »pnpm update --latest«'));
           // Dart first: a hybrid's npm lifecycle scripts may shell into it.
           expect(
@@ -658,9 +690,9 @@ void main() {
         });
 
         tearDown(() {
-          expect(messages[1], contains('⌛️ Run »dart pub upgrade --tighten«'));
+          expect(messages[1], contains('⌛️ Run »dart pub upgrade«'));
 
-          expect(messages[2], contains('✓ Run »dart pub upgrade --tighten«'));
+          expect(messages[2], contains('✓ Run »dart pub upgrade«'));
         });
 
         test('- programmatically', () async {
@@ -689,11 +721,11 @@ void main() {
         tearDown(() {
           expect(
             messages[1],
-            contains('⌛️ Run »flutter pub upgrade --major-versions --tighten«'),
+            contains('⌛️ Run »flutter pub upgrade --major-versions«'),
           );
           expect(
             messages[2],
-            contains('✓ Run »flutter pub upgrade --major-versions --tighten«'),
+            contains('✓ Run »flutter pub upgrade --major-versions«'),
           );
         });
 
@@ -750,6 +782,15 @@ void main() {
           );
 
           expect(messages, isEmpty);
+        });
+
+        test('with tighten', () async {
+          final didUpgrade = MockDoUpgradeDeps();
+          didUpgrade.mockExec(result: null, ggLog: ggLog, tighten: true);
+
+          await didUpgrade.exec(directory: d, ggLog: ggLog, tighten: true);
+
+          expect(messages[0], contains('✓ DoUpgradeDeps'));
         });
       });
     });
