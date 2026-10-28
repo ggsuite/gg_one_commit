@@ -4,6 +4,7 @@
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
 
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:args/command_runner.dart';
@@ -13,6 +14,7 @@ import 'package:gg_git/gg_git_test_helpers.dart';
 import 'package:gg_log/gg_log.dart';
 import 'package:gg_one_commit/src/commands/can/can_commit.dart';
 import 'package:gg_one_commit/src/commands/do/do_commit.dart';
+import 'package:gg_one_core/gg_one_core.dart';
 import 'package:gg_process/gg_process.dart';
 import 'package:gg_status_printer/gg_status_printer.dart';
 import 'package:mocktail/mocktail.dart';
@@ -27,6 +29,9 @@ Future<void> checkout(Directory d, String branch) =>
 /// Returns true when everything in [d] is committed.
 Future<bool> isCommitted(Directory d) =>
     IsCommitted(ggLog: _noLog).get(directory: d, ggLog: _noLog);
+
+class MockEnsurePublishConfigIgnored extends Mock
+    implements EnsurePublishConfigIgnored {}
 
 void _noLog(String _) {}
 
@@ -133,7 +138,11 @@ void main() {
     mockCanCommit();
 
     // Create command
-    doCommit = DoCommit(ggLog: ggLog, canCommit: canCommit);
+    doCommit = DoCommit(
+      ggLog: ggLog,
+      canCommit: canCommit,
+      hasTerminal: () => false,
+    );
 
     // Create runner
     runner = CommandRunner<void>('test', 'test');
@@ -462,6 +471,7 @@ void main() {
 
           // Execute the command
           final doCommit = DoCommit(
+            hasTerminal: () => false,
             ggLog: ggLog,
             canCommit: canCommit,
             processWrapper: processWrapper,
@@ -511,6 +521,7 @@ void main() {
 
           // Execute the command
           final doCommit = DoCommit(
+            hasTerminal: () => false,
             ggLog: ggLog,
             canCommit: canCommit,
             processWrapper: processWrapper,
@@ -537,7 +548,11 @@ void main() {
           await addFileWithoutCommitting(d);
 
           // Execute the command
-          final doCommit = DoCommit(ggLog: ggLog, canCommit: canCommit);
+          final doCommit = DoCommit(
+            ggLog: ggLog,
+            canCommit: canCommit,
+            hasTerminal: () => false,
+          );
 
           late String exception;
 
@@ -1068,6 +1083,232 @@ void main() {
         await File('${dGg.path}/CHANGELOG.md').readAsString(),
         contains('My commit'),
       );
+    });
+  });
+  group('without -m on the command line', () {
+    late List<String> sheets;
+    late MockEnsurePublishConfigIgnored ensureIgnored;
+
+    /// The message of the last commit that is not gg's own bookkeeping.
+    Future<String> lastCommitMessage() async {
+      final log = await Process.run('git', [
+        'log',
+        '--pretty=%B%x00',
+      ], workingDirectory: d.path);
+      return log.stdout
+          .toString()
+          .split('\x00')
+          .map((message) => message.trim())
+          .firstWhere((message) => !message.startsWith('#gg:'));
+    }
+
+    /// The command under test, editing the sheet with [answer].
+    DoCommit command({
+      String? Function(String text)? answer,
+      bool hasTerminal = true,
+    }) => DoCommit(
+      ggLog: ggLog,
+      canCommit: canCommit,
+      hasTerminal: () => hasTerminal,
+      ensureIgnored: ensureIgnored,
+      editText: ({required prompt, required text, required fileName}) async {
+        expect(prompt, 'gg do commit');
+        expect(fileName, '${path.basename(d.path)}_commit.jsonc');
+        sheets.add(text);
+        return answer?.call(text);
+      },
+    );
+
+    CommandRunner<void> runnerWith({
+      String? Function(String text)? answer,
+      bool hasTerminal = true,
+    }) =>
+        CommandRunner<void>('test', 'test')
+          ..addCommand(command(answer: answer, hasTerminal: hasTerminal));
+
+    /// The sheet [d] is edited with: [commit] and [merge] as given.
+    String Function(String) answer({List<String>? commit, String? merge}) =>
+        (_) => jsonEncode({
+          path.basename(d.path): {
+            'commitMessage': ?commit,
+            if (merge != null) 'mergeMessage': [merge],
+          },
+        });
+
+    void verifyHidden(int times) =>
+        verify(() => ensureIgnored.ensure(directory: any(named: 'directory')))
+            .called(times);
+
+    setUp(() async {
+      sheets = [];
+      ensureIgnored = MockEnsurePublishConfigIgnored();
+      when(() => ensureIgnored.ensure(directory: any(named: 'directory')))
+          .thenAnswer((_) async => false);
+      File(path.join(d.path, 'ticket.json'))
+          .writeAsStringSync('{"description": "Ticket desc"}');
+      await addFileWithoutCommitting(d);
+    });
+
+    test('edits commit and merge message on a sheet', () async {
+      await runnerWith(
+        answer: answer(commit: ['Edited', 'Detail'], merge: 'Merge'),
+      ).run(['commit', '--input', d.path]);
+
+      expect(sheets.single, contains('"commitMessage": ["Ticket desc"]'));
+      expect(sheets.single, contains('"mergeMessage": ["Ticket desc"]'));
+      expect(await lastCommitMessage(), 'Edited\n\nDetail');
+
+      final config = RepoPublishConfig.tryLoad(d)!;
+      expect(config.mergeMessage, 'Merge');
+      expect(config.commits.single.text, 'Edited\n\nDetail');
+      verifyHidden(1);
+    });
+
+    test('starts with the proposal of publish_config.json', () async {
+      await RepoPublishConfig(
+        nextCommitMessage: CommitMessage(firstLine: 'Proposed'),
+        mergeMessage: 'Recorded merge',
+      ).save(file: repoPublishConfigFile(d));
+
+      await runnerWith(answer: (text) => text)
+          .run(['commit', '--input', d.path]);
+
+      expect(sheets.single, contains('"commitMessage": ["Proposed"]'));
+      expect(sheets.single, contains('"mergeMessage": ["Recorded merge"]'));
+    });
+
+    test('--no-interactive takes and records the ticket description', () async {
+      await runnerWith().run(['commit', '--no-interactive', '--input', d.path]);
+
+      expect(sheets, isEmpty);
+      expect(await lastCommitMessage(), 'Ticket desc');
+      // The commit is recorded; the default merge message is not frozen.
+      final config = RepoPublishConfig.tryLoad(d)!;
+      expect(config.commits.single.firstLine, 'Ticket desc');
+      expect(config.mergeMessage, isNull);
+      verifyHidden(1);
+    });
+
+    test('takes the defaults without a terminal', () async {
+      await runnerWith(hasTerminal: false).run(['commit', '--input', d.path]);
+      expect(sheets, isEmpty);
+      expect(await lastCommitMessage(), 'Ticket desc');
+    });
+
+    test('reports the missing message without an editor', () async {
+      await expectLater(
+        runnerWith().run(['commit', '--input', d.path]),
+        throwsA(
+          isA<Exception>().having(
+            (e) => rmControls(e.toString()),
+            'message',
+            contains('Run again with message'),
+          ),
+        ),
+      );
+      expect(sheets, hasLength(1));
+      verifyNever(
+        () => ensureIgnored.ensure(directory: any(named: 'directory')),
+      );
+    });
+
+    test('records only the commit when only the commit message is '
+        'edited', () async {
+      File(path.join(d.path, 'ticket.json')).writeAsStringSync('{}');
+      await runnerWith(answer: answer(commit: ['Only commit']))
+          .run(['commit', '--input', d.path]);
+
+      expect(sheets.single, contains('"mergeMessage": ["Publish '));
+      expect(await lastCommitMessage(), 'Only commit');
+      final config = RepoPublishConfig.tryLoad(d)!;
+      expect(config.commits.single.firstLine, 'Only commit');
+      expect(config.mergeMessage, isNull);
+      verifyHidden(1);
+    });
+
+    test('records the commit but no merge message the .gitignore cannot '
+        'hide', () async {
+      when(() => ensureIgnored.ensure(directory: any(named: 'directory')))
+          .thenThrow(Exception('no git'));
+
+      await runnerWith(
+        answer: answer(commit: ['Edited'], merge: 'Merge'),
+      ).run(['commit', '--input', d.path]);
+
+      expect(await lastCommitMessage(), 'Edited');
+      final config = RepoPublishConfig.tryLoad(d)!;
+      expect(config.commits.single.firstLine, 'Edited');
+      expect(config.mergeMessage, isNull);
+      expect(
+        messages.join('\n'),
+        contains(
+          'Could not hide publish_config.json from git, the merge message '
+          'is not recorded: Exception: no git',
+        ),
+      );
+    });
+
+    test('only warns when the record cannot be written', () async {
+      // A directory where the file belongs makes the write fail.
+      Directory(repoPublishConfigFile(d).path).createSync(recursive: true);
+
+      await runnerWith(
+        answer: answer(commit: ['Edited'], merge: 'Merge'),
+      ).run(['commit', '--input', d.path]);
+
+      expect(await lastCommitMessage(), 'Edited');
+      expect(messages.join('\n'), contains('Could not record the messages:'));
+      // The commit counts as done.
+      expect(
+        await GgState(ggLog: ggLog)
+            .readSuccess(directory: d, key: GgState.doCommitKey, ggLog: ggLog),
+        isTrue,
+      );
+    });
+
+    test('keeps the edits when the checks fail', () async {
+      when(
+        () => canCommit.exec(
+          directory: any(named: 'directory'),
+          ggLog: ggLog,
+          force: null,
+        ),
+      ).thenThrow(Exception('Tests failed'));
+
+      await expectLater(
+        runnerWith(
+          answer: answer(commit: ['Edited', 'Detail'], merge: 'Merge'),
+        ).run(['commit', '--input', d.path]),
+        throwsA(isA<Exception>()),
+      );
+
+      expect(await isCommitted(d), isFalse);
+      final config = RepoPublishConfig.tryLoad(d)!;
+      expect(config.commits, isEmpty);
+      expect(config.nextCommitMessage?.text, 'Edited\n\nDetail');
+      expect(config.mergeMessage, 'Merge');
+    });
+
+    test('is not asked with -m', () async {
+      await runnerWith().run(['commit', '-m', 'Given', '--input', d.path]);
+      expect(sheets, isEmpty);
+      expect(await lastCommitMessage(), 'Given');
+      expect(RepoPublishConfig.tryLoad(d), isNull);
+    });
+
+    test('is not asked when called from code', () async {
+      await expectLater(
+        command(answer: (_) => fail('No sheet may be opened'))
+            .exec(directory: d, ggLog: ggLog),
+        throwsA(
+          isA<Exception>().having(
+            (e) => rmControls(e.toString()),
+            'message',
+            contains('Run again with message'),
+          ),
+        ),
+      );
+      expect(sheets, isEmpty);
     });
   });
 }

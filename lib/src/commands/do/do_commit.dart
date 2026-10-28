@@ -18,6 +18,8 @@ import 'package:gg_one_commit/src/commands/can/can_commit.dart';
 import 'package:gg_one_commit/src/tools/ocean_folder_guard.dart';
 import 'package:gg_one_commit/src/tools/repository_url.dart';
 import 'package:gg_process/gg_process.dart';
+import 'package:gg_status_printer/gg_status_printer.dart';
+import 'package:path/path.dart' as path;
 
 cl.LogType _stringToLogType(String e) {
   e = e.toLowerCase();
@@ -56,7 +58,14 @@ class DoCommit extends DirCommand<void> {
     IsFeatureBranch? isFeatureBranch,
     LocalBranch? localBranch,
     ContributedCommits? contributedCommits,
-  }) : _contributedCommits = contributedCommits ?? ContributedCommits(),
+    EditText? editText,
+    HasTerminal? hasTerminal,
+    EnsurePublishConfigIgnored? ensureIgnored,
+  }) : _editText = editText ?? defaultEditText,
+       _hasTerminal = hasTerminal ?? stdioHasTerminal,
+       _ensureIgnored =
+           ensureIgnored ?? EnsurePublishConfigIgnored(ggLog: ggLog),
+       _contributedCommits = contributedCommits ?? ContributedCommits(),
        _isFeatureBranch = isFeatureBranch ?? IsFeatureBranch(ggLog: ggLog),
        _localBranch = localBranch ?? LocalBranch(ggLog: ggLog),
        _isGitCommitted = isCommitted ?? IsCommitted(ggLog: ggLog),
@@ -134,6 +143,16 @@ class DoCommit extends DirCommand<void> {
       }
     }
 
+    // Started on the command line without -m: the message is edited on a
+    // sheet in the editor, or taken from the proposal and the ticket. A
+    // caller passing its own message is never asked.
+    _Sheet? sheet;
+    if (message == null && !isCommittedViaGit && _lacksMessageOption) {
+      sheet = await _askMessages(directory);
+      final text = sheet.edited?.commitMessage?.text ?? '';
+      message = text.isEmpty ? null : text;
+    }
+
     // Check needed options
     try {
       message ??= _getMessageFromArgs();
@@ -148,6 +167,12 @@ class DoCommit extends DirCommand<void> {
       }
     }
 
+    // The publish config the answers are written into is hidden before the
+    // commit, so `git add .` never sweeps it into the user's commit.
+    final hidden =
+        sheet?.edited != null &&
+        await _hidePublishConfig(directory: directory, ggLog: ggLog);
+
     // CHANGELOG update currently depends on cider, which requires
     // pubspec.yaml. Skip it for TypeScript projects until we have a
     // TypeScript-native changelog writer.
@@ -158,7 +183,19 @@ class DoCommit extends DirCommand<void> {
 
     // Is everything fine? Skip checks when --force is used
     if (force != true) {
-      await _canCommit.exec(directory: directory, ggLog: ggLog);
+      try {
+        await _canCommit.exec(directory: directory, ggLog: ggLog);
+      } catch (_) {
+        // Keep what the user edited, so the next run offers it again.
+        await _record(
+          directory: directory,
+          sheet: sheet,
+          committed: false,
+          withMergeMessage: hidden,
+          ggLog: ggLog,
+        );
+        rethrow;
+      }
     }
 
     // Nothing to record: the tree is clean and everything this ticket
@@ -204,6 +241,14 @@ class DoCommit extends DirCommand<void> {
       );
     }
 
+    await _record(
+      directory: directory,
+      sheet: sheet,
+      committed: !isCommittedViaGit,
+      withMergeMessage: hidden,
+      ggLog: ggLog,
+    );
+
     // Save the state
     await state.writeSuccess(directory: directory, key: stateKey);
   }
@@ -231,6 +276,9 @@ class DoCommit extends DirCommand<void> {
 
   // ...........................................................................
   final GgProcessWrapper _processWrapper;
+  final EditText _editText;
+  final HasTerminal _hasTerminal;
+  final EnsurePublishConfigIgnored _ensureIgnored;
   final ContributedCommits _contributedCommits;
   final IsFeatureBranch _isFeatureBranch;
   final LocalBranch _localBranch;
@@ -262,6 +310,98 @@ class DoCommit extends DirCommand<void> {
       defaultsTo: false,
       negatable: true,
     );
+
+    argParser.addFlag(
+      'no-interactive',
+      help:
+          'Ask nothing: take the proposed commit message, else the ticket '
+          'description.',
+      defaultsTo: false,
+      negatable: false,
+    );
+  }
+
+  /// Whether the command runs from the command line without `-m`.
+  bool get _lacksMessageOption =>
+      argResults != null &&
+      ((argResults!['message'] as String?) ?? '').trim().isEmpty;
+
+  /// The commit message and the merge message of [directory] as they are
+  /// shown, and as the user saved them — the defaults when nobody is asked:
+  /// the proposal of `publish_config.json`, else the ticket description.
+  /// Nothing is saved when there is no editor; the missing message is then
+  /// reported as before.
+  Future<_Sheet> _askMessages(Directory directory) async {
+    final shown = commitSheetEntry(
+      repo: path.basename(directory.path),
+      config: RepoPublishConfig.tryLoad(directory),
+      description: readTicketDescriptionForRepo(directory) ?? '',
+    );
+
+    final interactive = !(argResults!['no-interactive'] as bool);
+    if (!interactive || !_hasTerminal()) {
+      return (shown: shown, edited: shown);
+    }
+
+    final edited = await MessageSheet(entries: [shown]).edit(
+      title: 'gg do commit',
+      fileName: '${shown.repo}_commit.jsonc',
+      editText: _editText,
+    );
+    return (shown: shown, edited: edited?.single);
+  }
+
+  /// Lists the publish config in the `.gitignore` of [directory], so it never
+  /// shows up as a change. Returns false, with a warning, when that failed:
+  /// the commit is still made and recorded, only the merge message is not.
+  Future<bool> _hidePublishConfig({
+    required Directory directory,
+    required GgLog ggLog,
+  }) async {
+    try {
+      await _ensureIgnored.ensure(directory: directory);
+      return true;
+    } catch (e) {
+      ggLog(
+        cWarn(
+          '⚠️ Could not hide publish_config.json from git, the merge message '
+          'is not recorded: ${rmControls('$e')}',
+        ),
+      );
+      return false;
+    }
+  }
+
+  /// Writes the answers of the [sheet] into the `publish_config.json` of
+  /// [directory] — see [CommitSheetAnswers.withCommitAnswers]: the commit
+  /// when it was [committed], what the user changed in any case. Never fails
+  /// the command: the commit may be made already.
+  Future<void> _record({
+    required Directory directory,
+    required _Sheet? sheet,
+    required bool committed,
+    required bool withMergeMessage,
+    required GgLog ggLog,
+  }) async {
+    final edited = sheet?.edited;
+    if (edited == null) {
+      return;
+    }
+    try {
+      final config =
+          RepoPublishConfig.tryLoad(directory) ?? RepoPublishConfig();
+      final updated = config.withCommitAnswers(
+        committed: committed ? edited.commitMessage : null,
+        shown: sheet!.shown,
+        edited: edited,
+        withMergeMessage: withMergeMessage,
+      );
+      if (!identical(updated, config)) {
+        await updated.save(file: repoPublishConfigFile(directory));
+      }
+    } catch (e) {
+      ggLog(cWarn('⚠️ Could not record the messages: ${rmControls('$e')}'));
+    }
   }
 
   // ...........................................................................
@@ -418,6 +558,11 @@ class DoCommit extends DirCommand<void> {
     return argResults?['force'] as bool? ?? false;
   }
 }
+
+// .............................................................................
+/// A repository's entry on the commit sheet as it was shown, and as the user
+/// saved it — null when nobody could edit it.
+typedef _Sheet = ({MessageSheetEntry shown, MessageSheetEntry? edited});
 
 // .............................................................................
 /// Mock for [DoCommit].

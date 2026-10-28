@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Edit commit messages, merge messages and version increments of all repos in one JSON file in VS Code
+
 ## 2.8.6 - 2026-10-19
 
 ## 2.8.5 - 2026-10-16
