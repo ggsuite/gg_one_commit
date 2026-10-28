@@ -63,12 +63,12 @@ void main() {
     String executable = 'dart',
   }) {
     when(
-      () => processWrapper.run(executable, [
-        'pub',
-        'upgrade',
-        if (majorVersions) '--major-versions',
-        '--tighten',
-      ], workingDirectory: d.path),
+      () => processWrapper.run(
+        executable,
+        ['pub', 'upgrade', if (majorVersions) '--major-versions', '--tighten'],
+        workingDirectory: d.path,
+        runInShell: executable == 'flutter',
+      ),
     ).thenAnswer((_) async {
       if (upgradingCausesChange) {
         await updateSampleFileWithoutCommitting(d);

@@ -5,6 +5,11 @@
 ### Changed
 
 - Edit commit messages, merge messages and version increments of all repos in one JSON file in VS Code
+## 2.8.7 - 2026-10-28
+
+### Changed
+
+- Run flutter through the shell in gg one do upgrade deps, so Windows finds flutter.bat
 
 ## 2.8.6 - 2026-10-19
 
