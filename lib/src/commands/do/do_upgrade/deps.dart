@@ -363,6 +363,10 @@ class DoUpgradeDeps extends DirCommand<void> {
         ? 'flutter'
         : 'dart';
 
+    // On Windows »flutter« is a batch file, which only a shell finds;
+    // »dart« is a real executable and runs without one.
+    final runInShell = executable == 'flutter';
+
     final args = [
       'pub',
       'upgrade',
@@ -380,6 +384,7 @@ class DoUpgradeDeps extends DirCommand<void> {
           executable,
           args,
           workingDirectory: directory.path,
+          runInShell: runInShell,
         );
 
         // Every package shares one git mirror per git dependency in the pub
@@ -397,6 +402,7 @@ class DoUpgradeDeps extends DirCommand<void> {
             executable,
             args,
             workingDirectory: directory.path,
+            runInShell: runInShell,
           );
         }
 

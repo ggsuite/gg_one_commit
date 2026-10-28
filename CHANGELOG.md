@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Run flutter through the shell in gg one do upgrade deps, so Windows finds flutter.bat
+
 ## 2.8.6 - 2026-10-19
 
 ## 2.8.5 - 2026-10-16
