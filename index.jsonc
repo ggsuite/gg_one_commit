@@ -1,0 +1,48 @@
+// @license
+// Copyright (c) ggsuite
+//
+// Use of this source code is governed by terms that can be
+// found in the LICENSE file in the root of this package.
+
+{
+  // The package name, as declared in pubspec.yaml / package.json.
+  "name": "gg_one_commit",
+
+  // 1-2 sentence summary about this repo.
+  "summary": "Daily repo flows of the gg_one tool family: commit, push, upgrade deps, create ticket branches.",
+
+  // 1-3 bullet points: the problem space.
+  "domain": [
+    "can/do/did commit, push, upgrade; do create ticket; ocean folder guard",
+    "gg do commit without -m: commit and merge message on one sheet in the editor; --no-interactive",
+    "CHANGELOG entry per commit",
+  ],
+
+  // The repos this one depends on and the repos depending on it.
+  // Keep the reason or the API behind each entry, not just the name.
+  "interfaces": {
+    // "<repo-a>": "why / API"
+    "uses": {
+      "gg_one_core": "GgState, Checks, DidCommand, CommandCluster, MessageSheet, RepoPublishConfig",
+      "gg_changelog": "CHANGELOG.md entry on commit",
+      "gg_git": "git state: LocalBranch, IsPushed, UpstreamBranch",
+      "gg_publish": "IsUpgraded, IsMainBranch",
+      "gg_lang": "ProjectType",
+      "gg_process": "GgProcessWrapper",
+      "gg_args": "command base",
+      "gg_status_printer": "progress output",
+      "gg_console_colors": "colored output",
+      "gg_log": "GgLog",
+      "dna_ggsuite": "dev: DNA layer: guides, templates",
+      "helix": "dev: runDnaTest",
+    },
+
+    // "<repo-b>": "why / API"
+    "usedBy": {
+      "gg_one": "re-exports gg_one_commit, registers its commands",
+      "gg_one_merge": "DidCommit in can merge",
+      "gg_one_do_publish": "CanCommit, DidCommit, DoPush, DoUpgradeDeps",
+      "gg_create_repo": "CanCommit, DoCommit: initial commit",
+    },
+  },
+}

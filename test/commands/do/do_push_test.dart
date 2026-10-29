@@ -90,7 +90,11 @@ void main() async {
     doPush = DoPush(ggLog: ggLog, canPush: canPush);
     canCommit = MockCanCommit();
 
-    doCommit = DoCommit(ggLog: ggLog, canCommit: canCommit);
+    doCommit = DoCommit(
+      ggLog: ggLog,
+      canCommit: canCommit,
+      hasTerminal: () => false,
+    );
     isPushed = IsPushed(ggLog: ggLog);
     ggJson = File(join(dLocal.path, '.gg', 'gg.json'));
   });
