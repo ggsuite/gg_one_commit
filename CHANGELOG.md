@@ -10,6 +10,7 @@
 
 - Respect .gg/gg_rc.jsonc in upgrade and can commit
 - Read the settings from .gg/gg_rc.jsonc
+- Drop resolved open point from the blog post
 
 ## 2.9.1 - 2026-11-06
 

@@ -54,6 +54,4 @@ found in the LICENSE file in the root of this package.
 
 ## Open Points
 
-- The bookkeeping commit message written after an upgrade during a publish
-  still reads »dart pub upgrade --major-versions --tighten«, also when the
-  upgrade ran without majors
+- None
