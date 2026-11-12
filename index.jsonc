@@ -9,7 +9,7 @@
   "name": "gg_one_commit",
 
   // 1-2 sentence summary about this repo.
-  "summary": "Daily repo flows of the gg_one tool family: commit, push, upgrade deps (respects ggrc.jsonc), create ticket branches.",
+  "summary": "Daily repo flows of the gg_one tool family: commit, push, upgrade deps (respects gg_rc.jsonc), create ticket branches.",
 
   // 1-3 bullet points: the problem space.
   "domain": [

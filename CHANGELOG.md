@@ -4,7 +4,8 @@
 
 ### Changed
 
-- Respect .gg/ggrc.jsonc in upgrade and can commit
+- Respect .gg/gg_rc.jsonc in upgrade and can commit
+- Read the settings from .gg/gg_rc.jsonc
 
 ## 2.9.1 - 2026-11-06
 

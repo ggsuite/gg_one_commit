@@ -441,7 +441,7 @@ void main() {
           expect(messages.join('\n'), contains('✓ Run »pnpm update«'));
         });
 
-        test('drops --latest when .gg/ggrc.jsonc forbids majors', () async {
+        test('drops --latest when .gg/gg_rc.jsonc forbids majors', () async {
           writePackageJson();
           ggRcFile(d)
             ..parent.createSync(recursive: true)
@@ -456,7 +456,7 @@ void main() {
           expect(all, contains('✓ Run »pnpm update«'));
         });
 
-        test('creates .gg/ggrc.jsonc when missing', () async {
+        test('creates .gg/gg_rc.jsonc when missing', () async {
           writePackageJson();
           mockNodeUpgrade();
           mockDartPubUpgrade();
