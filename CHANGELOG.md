@@ -13,6 +13,7 @@
 - Drop resolved open point from the blog post
 - Use RepoGgRc from gg_one_core
 - Read the repository settings from .gg/gg_rc with GgRc
+- Name gg_multi_commit as a user in index.jsonc
 
 ## 2.9.1 - 2026-11-06
 

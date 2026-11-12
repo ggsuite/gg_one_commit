@@ -43,6 +43,7 @@
       "gg_one_merge": "DidCommit in can merge",
       "gg_one_do_publish": "CanCommit, DidCommit, DoPush, DoUpgradeDeps",
       "gg_create_repo": "CanCommit, DoCommit: initial commit",
+      "gg_multi_commit": "DoUpgradeDeps.effectiveMajorVersions",
     },
   },
 }
