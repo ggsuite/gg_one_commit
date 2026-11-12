@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- Add blog post and README section for gg_rc.jsonc
+
 ### Changed
 
 - Respect .gg/gg_rc.jsonc in upgrade and can commit
