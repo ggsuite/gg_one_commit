@@ -9,7 +9,7 @@
   "name": "gg_one_commit",
 
   // 1-2 sentence summary about this repo.
-  "summary": "Daily repo flows of the gg_one tool family: commit, push, upgrade deps (respects gg_rc.jsonc), create ticket branches.",
+  "summary": "Daily repo flows of the gg_one tool family: commit, push, upgrade deps (respects .gg/gg_rc), create ticket branches.",
 
   // 1-3 bullet points: the problem space.
   "domain": [
@@ -23,7 +23,7 @@
   "interfaces": {
     // "<repo-a>": "why / API"
     "uses": {
-      "gg_one_core": "GgState, Checks, DidCommand, CommandCluster, MessageSheet, RepoPublishConfig, RepoGgRc",
+      "gg_one_core": "GgState, Checks, DidCommand, CommandCluster, MessageSheet, RepoPublishConfig, GgRc",
       "gg_changelog": "CHANGELOG.md entry on commit",
       "gg_git": "git state: LocalBranch, IsPushed, UpstreamBranch",
       "gg_publish": "IsUpgraded, IsMainBranch",
