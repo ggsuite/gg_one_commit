@@ -23,7 +23,7 @@
   "interfaces": {
     // "<repo-a>": "why / API"
     "uses": {
-      "gg_one_core": "GgState, Checks, DidCommand, CommandCluster, MessageSheet, RepoPublishConfig, GgRc",
+      "gg_one_core": "GgState, Checks, DidCommand, CommandCluster, MessageSheet, RepoPublishConfig, RepoGgRc",
       "gg_changelog": "CHANGELOG.md entry on commit",
       "gg_git": "git state: LocalBranch, IsPushed, UpstreamBranch",
       "gg_publish": "IsUpgraded, IsMainBranch",

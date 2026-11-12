@@ -443,7 +443,7 @@ void main() {
 
         test('drops --latest when .gg/gg_rc.jsonc forbids majors', () async {
           writePackageJson();
-          ggRcFile(d)
+          repoGgRcFile(d)
             ..parent.createSync(recursive: true)
             ..writeAsStringSync('{"upgradeMajorVersions": false}');
           mockNodeUpgrade(majorVersions: false);
@@ -463,7 +463,7 @@ void main() {
 
           await doUpgrade.exec(directory: d, ggLog: ggLog);
 
-          expect(ggRcFile(d).existsSync(), isTrue);
+          expect(repoGgRcFile(d).existsSync(), isTrue);
         });
 
         test('uses yarn when a yarn.lock is present', () async {

@@ -20,7 +20,7 @@ found in the LICENSE file in the root of this package.
 
 ## Strategy
 
-- Read the per-repository settings with `GgRc` from gg_one_core
+- Read the per-repository settings with `RepoGgRc` from gg_one_core
 - Apply them at the single place each behavior is decided, so every flow
   that goes through it follows automatically
 - Keep the defaults: without a file, or with the defaults written into it,
@@ -50,7 +50,7 @@ found in the LICENSE file in the root of this package.
 
 ## Dependency updates
 
-- gg_one_core: new `GgRc` settings reader and skippable `CommandCluster`
+- gg_one_core: new `RepoGgRc` settings reader and skippable `CommandCluster`
 
 ## Open Points
 

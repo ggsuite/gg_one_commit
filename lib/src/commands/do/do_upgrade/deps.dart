@@ -91,7 +91,7 @@ class DoUpgradeDeps extends DirCommand<void> {
 
     // .gg/gg_rc.jsonc may forbid crossing major versions for this repository.
     // The file is created with its defaults when missing.
-    if (majorVersions && !GgRc.load(directory).upgradeMajorVersions) {
+    if (majorVersions && !RepoGgRc.load(directory).upgradeMajorVersions) {
       ggLog(cDetail('upgradeMajorVersions is false in .gg/gg_rc.jsonc.'));
       majorVersions = false;
     }
