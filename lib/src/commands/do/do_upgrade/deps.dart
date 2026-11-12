@@ -31,6 +31,12 @@ import 'package:mocktail/mocktail.dart';
 /// `pubspec.yaml`, so a TypeScript repository was never upgraded at all and a
 /// hybrid only ever saw its Dart side move.
 ///
+/// Whether majors are crossed: an explicit `majorVersions` /
+/// `--[no-]major-versions` decides; without one, the setting
+/// `do.upgrade.deps.majorVersions` of the repository's `.gg/gg_rc` does
+/// (default `true`, see [GgRc]). The file is created with its defaults when
+/// missing.
+///
 /// The upgrade itself runs no checks — the flows that call it (`gg do push`,
 /// `gg do publish`) run `gg can commit` right afterwards, so validating here
 /// would only duplicate that step.
@@ -65,7 +71,7 @@ class DoUpgradeDeps extends DirCommand<void> {
     required GgLog ggLog,
     bool? majorVersions,
   }) async {
-    majorVersions ??= _majorVersionsFromArgs;
+    final explicitMajorVersions = majorVersions ?? _majorVersionsFromArgs;
 
     // Does directory exist?
     await check(directory: directory);
@@ -89,6 +95,22 @@ class DoUpgradeDeps extends DirCommand<void> {
     // Can upgrade?
     await _canUpgrade.exec(directory: directory, ggLog: ggLog);
 
+    // Without --[no-]major-versions the repository's .gg/gg_rc decides. The
+    // file is created with its defaults when missing.
+    GgRc.loadRepo(directory, create: true);
+    final majors = effectiveMajorVersions(
+      directory,
+      explicit: explicitMajorVersions,
+    );
+    if (!majors && explicitMajorVersions == null) {
+      ggLog(
+        cDetail(
+          '${GgRc.keyPath(GgRc.upgradeMajorVersions)} is false in '
+          '.gg/${GgRc.repoFileName}.',
+        ),
+      );
+    }
+
     // Remember the state before the upgrade
     final hashBefore = await _state.currentHash(
       directory: directory,
@@ -103,14 +125,11 @@ class DoUpgradeDeps extends DirCommand<void> {
     // a hybrid's npm lifecycle scripts may shell into the Dart side, which
     // should then already be resolved.
     if (hasPubspec) {
-      await _runDartPubUpgrade(
-        directory: directory,
-        majorVersions: majorVersions,
-      );
+      await _runDartPubUpgrade(directory: directory, majorVersions: majors);
     }
 
     if (hasPackageJson) {
-      await _runNodeUpgrade(directory: directory, majorVersions: majorVersions);
+      await _runNodeUpgrade(directory: directory, majorVersions: majors);
     }
 
     // Tell the user whether the upgrade changed anything. The verdict covers
@@ -143,7 +162,9 @@ class DoUpgradeDeps extends DirCommand<void> {
     argParser.addFlag(
       'major-versions',
       abbr: 'm',
-      help: 'Upgrade packages to their latest versions',
+      help:
+          'Upgrade across major versions. Without the flag, '
+          'do.upgrade.deps.majorVersions in .gg/gg_rc decides.',
       defaultsTo: true,
       negatable: true,
     );
@@ -434,10 +455,21 @@ class DoUpgradeDeps extends DirCommand<void> {
       stderr.contains(".lock': File exists");
 
   // ...........................................................................
-  bool get _majorVersionsFromArgs {
-    final majorVersions = argResults?['major-versions'] as bool? ?? true;
-    return majorVersions;
+  /// --[no-]major-versions when it was given on the command line, else null.
+  bool? get _majorVersionsFromArgs {
+    final args = argResults;
+    if (args == null || !args.wasParsed('major-versions')) {
+      return null;
+    }
+    return args['major-versions'] as bool;
   }
+
+  // ...........................................................................
+  /// Whether an upgrade of [repo] crosses major versions: [explicit] when the
+  /// caller decided, else `do.upgrade.deps.majorVersions` of the repository's
+  /// `.gg/gg_rc` (default `true`). Reads the file only, never writes it.
+  static bool effectiveMajorVersions(Directory repo, {bool? explicit}) =>
+      explicit ?? GgRc.loadRepo(repo).flag(GgRc.upgradeMajorVersions);
 }
 
 /// Mock for [DoUpgradeDeps].

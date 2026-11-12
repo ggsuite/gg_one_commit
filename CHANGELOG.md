@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.10.0 - 2026-11-12
+
+### Added
+
+- Add blog post and README section for gg_rc.jsonc
+
+### Changed
+
+- Respect .gg/gg_rc.jsonc in upgrade and can commit
+- Read the settings from .gg/gg_rc.jsonc
+- Drop resolved open point from the blog post
+- Use RepoGgRc from gg_one_core
+- Read the repository settings from .gg/gg_rc with GgRc
+- Name gg_multi_commit as a user in index.jsonc
+
 ## 2.9.1 - 2026-11-06
 
 ### Changed

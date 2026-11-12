@@ -4,6 +4,7 @@
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
 
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:args/command_runner.dart';
@@ -439,6 +440,68 @@ void main() {
           );
 
           expect(messages.join('\n'), contains('✓ Run »pnpm update«'));
+        });
+
+        group('with .gg/gg_rc', () {
+          void forbidMajors() => GgRc.repoFileOf(d)
+            ..parent.createSync(recursive: true)
+            ..writeAsStringSync(
+              '{"do": {"upgrade": {"deps": {"majorVersions": false}}}}',
+            );
+
+          test('drops --latest when the repository forbids majors', () async {
+            writePackageJson();
+            forbidMajors();
+            mockNodeUpgrade(majorVersions: false);
+            mockDartPubUpgrade(majorVersions: false);
+
+            await doUpgrade.exec(directory: d, ggLog: ggLog);
+
+            final all = messages.join('\n');
+            expect(
+              all,
+              contains('do.upgrade.deps.majorVersions is false in .gg/gg_rc'),
+            );
+            expect(all, contains('✓ Run »pnpm update«'));
+          });
+
+          test('an explicit --major-versions wins over the file', () async {
+            writePackageJson();
+            forbidMajors();
+            mockNodeUpgrade();
+            mockDartPubUpgrade();
+
+            await doUpgrade.exec(
+              directory: d,
+              ggLog: ggLog,
+              majorVersions: true,
+            );
+
+            final all = messages.join('\n');
+            expect(all, isNot(contains('is false in .gg/gg_rc')));
+            expect(all, contains('✓ Run »pnpm update --latest«'));
+          });
+
+          test('is created with its defaults when missing', () async {
+            writePackageJson();
+            mockNodeUpgrade();
+            mockDartPubUpgrade();
+
+            await doUpgrade.exec(directory: d, ggLog: ggLog);
+
+            expect(
+              jsonDecode(GgRc.repoFileOf(d).readAsStringSync()),
+              GgRc.repoDefaults,
+            );
+          });
+        });
+
+        test('effectiveMajorVersions prefers the explicit value', () {
+          expect(DoUpgradeDeps.effectiveMajorVersions(d), isTrue);
+          expect(
+            DoUpgradeDeps.effectiveMajorVersions(d, explicit: false),
+            isFalse,
+          );
         });
 
         test('uses yarn when a yarn.lock is present', () async {
