@@ -441,6 +441,31 @@ void main() {
           expect(messages.join('\n'), contains('✓ Run »pnpm update«'));
         });
 
+        test('drops --latest when .gg/ggrc.jsonc forbids majors', () async {
+          writePackageJson();
+          ggRcFile(d)
+            ..parent.createSync(recursive: true)
+            ..writeAsStringSync('{"upgradeMajorVersions": false}');
+          mockNodeUpgrade(majorVersions: false);
+          mockDartPubUpgrade(majorVersions: false);
+
+          await doUpgrade.exec(directory: d, ggLog: ggLog);
+
+          final all = messages.join('\n');
+          expect(all, contains('upgradeMajorVersions is false'));
+          expect(all, contains('✓ Run »pnpm update«'));
+        });
+
+        test('creates .gg/ggrc.jsonc when missing', () async {
+          writePackageJson();
+          mockNodeUpgrade();
+          mockDartPubUpgrade();
+
+          await doUpgrade.exec(directory: d, ggLog: ggLog);
+
+          expect(ggRcFile(d).existsSync(), isTrue);
+        });
+
         test('uses yarn when a yarn.lock is present', () async {
           writePackageJson(lockFile: 'yarn.lock');
           mockNodeUpgrade(executable: 'yarn', args: ['upgrade', '--latest']);

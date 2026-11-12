@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Respect .gg/ggrc.jsonc in upgrade and can commit
+
 ## 2.9.1 - 2026-11-06
 
 ### Changed

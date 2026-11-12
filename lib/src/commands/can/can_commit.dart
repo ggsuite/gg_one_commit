@@ -23,7 +23,7 @@ class CanCommit extends CommandCluster {
     super.description = 'Check if this repo can be committed',
     super.shortDescription = 'Can commit?',
     super.stateKey = 'canCommit',
-  }) : super(commands: _checks(checks, ggLog));
+  }) : super(skippable: true, commands: _checks(checks, ggLog));
 
   // ...........................................................................
   static List<DirCommand<void>> _checks(Checks? checks, GgLog ggLog) {

@@ -89,6 +89,13 @@ class DoUpgradeDeps extends DirCommand<void> {
     // Can upgrade?
     await _canUpgrade.exec(directory: directory, ggLog: ggLog);
 
+    // .gg/ggrc.jsonc may forbid crossing major versions for this repository.
+    // The file is created with its defaults when missing.
+    if (majorVersions && !GgRc.load(directory).upgradeMajorVersions) {
+      ggLog(cDetail('upgradeMajorVersions is false in .gg/ggrc.jsonc.'));
+      majorVersions = false;
+    }
+
     // Remember the state before the upgrade
     final hashBefore = await _state.currentHash(
       directory: directory,
