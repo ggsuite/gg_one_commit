@@ -146,11 +146,22 @@ void main() {
   }
 
   // ...........................................................................
+  /// Lets the upgrade of the test repository cross major versions.
+  void allowMajors() => GgRc.repoFileOf(d)
+    ..parent.createSync(recursive: true)
+    ..writeAsStringSync(
+      '{"do": {"upgrade": {"deps": {"majorVersions": true}}}}',
+    );
+
   setUp(() async {
     d = await Directory.systemTemp.createTemp();
     await initGit(d);
     await addAndCommitSampleFile(d);
     await addAndCommitPubspecFile(d);
+
+    // Most tests below are about an upgrade across major versions, which a
+    // repository has to allow — the default does not.
+    allowMajors();
 
     messages.clear();
     runner = CommandRunner<void>('gg', 'gg');
@@ -483,9 +494,10 @@ void main() {
           });
 
           test('is created with its defaults when missing', () async {
+            GgRc.repoFileOf(d).deleteSync();
             writePackageJson();
-            mockNodeUpgrade();
-            mockDartPubUpgrade();
+            mockNodeUpgrade(majorVersions: false);
+            mockDartPubUpgrade(majorVersions: false);
 
             await doUpgrade.exec(directory: d, ggLog: ggLog);
 
@@ -494,10 +506,33 @@ void main() {
               GgRc.repoDefaults,
             );
           });
+
+          test('crosses no major versions by default', () async {
+            GgRc.repoFileOf(d).deleteSync();
+            writePackageJson();
+            mockNodeUpgrade(majorVersions: false);
+            mockDartPubUpgrade(majorVersions: false);
+
+            await doUpgrade.exec(directory: d, ggLog: ggLog);
+
+            final all = messages.join('\n');
+            expect(
+              all,
+              contains('do.upgrade.deps.majorVersions is false in .gg/gg_rc'),
+            );
+            expect(all, contains('✓ Run »dart pub upgrade --tighten«'));
+            expect(all, contains('✓ Run »pnpm update«'));
+          });
         });
 
         test('effectiveMajorVersions prefers the explicit value', () {
           expect(DoUpgradeDeps.effectiveMajorVersions(d), isTrue);
+          GgRc.repoFileOf(d).deleteSync();
+          expect(DoUpgradeDeps.effectiveMajorVersions(d), isFalse);
+          expect(
+            DoUpgradeDeps.effectiveMajorVersions(d, explicit: true),
+            isTrue,
+          );
           expect(
             DoUpgradeDeps.effectiveMajorVersions(d, explicit: false),
             isFalse,

@@ -34,12 +34,12 @@ import 'package:mocktail/mocktail.dart';
 /// Whether majors are crossed: an explicit `majorVersions` /
 /// `--[no-]major-versions` decides; without one, the setting
 /// `do.upgrade.deps.majorVersions` of the repository's `.gg/gg_rc` does
-/// (default `true`, see [GgRc]). The file is created with its defaults when
+/// (default `false`, see [GgRc]). The file is created with its defaults when
 /// missing.
 ///
-/// The upgrade itself runs no checks — the flows that call it (`gg do push`,
-/// `gg do publish`) run `gg can commit` right afterwards, so validating here
-/// would only duplicate that step.
+/// The upgrade itself runs no checks — the flows that call it run
+/// `gg can commit` right afterwards, so validating here would only duplicate
+/// that step.
 class DoUpgradeDeps extends DirCommand<void> {
   /// Constructor
   DoUpgradeDeps({
@@ -467,7 +467,7 @@ class DoUpgradeDeps extends DirCommand<void> {
   // ...........................................................................
   /// Whether an upgrade of [repo] crosses major versions: [explicit] when the
   /// caller decided, else `do.upgrade.deps.majorVersions` of the repository's
-  /// `.gg/gg_rc` (default `true`). Reads the file only, never writes it.
+  /// `.gg/gg_rc` (default `false`). Reads the file only, never writes it.
   static bool effectiveMajorVersions(Directory repo, {bool? explicit}) =>
       explicit ?? GgRc.loadRepo(repo).flag(GgRc.upgradeMajorVersions);
 }

@@ -9,14 +9,15 @@ defaults by `do upgrade deps` when missing):
 
 ```json
 {
-  "do": { "upgrade": { "deps": { "majorVersions": false } } },
+  "do": { "upgrade": { "deps": { "majorVersions": true } } },
   "can": { "commit": { "checks": false } }
 }
 ```
 
-- `do.upgrade.deps.majorVersions: false` — `do upgrade deps` runs without
-  `--major-versions` / `--latest`; an explicit `--[no-]major-versions` still
-  wins
+- `do.upgrade.deps.majorVersions` — off by default: `do upgrade deps` runs
+  without `--major-versions` / `--latest`. `true` lets the upgrade of this
+  repository cross major versions. An explicit `--[no-]major-versions` still
+  wins. A `.gg/gg_rc` written by an older version spells out `true`
 - `can.commit.checks: false` — `can commit` skips its checks, so everything
   is committed
 - Both belong to one repository: `~/.gg_rc` cannot set them
