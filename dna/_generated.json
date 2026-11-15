@@ -83,8 +83,8 @@
     },
     {
       "name": "dna-github",
-      "package": "dna_github",
-      "ecosystem": "pub",
+      "package": "@ggdna/dna-github",
+      "ecosystem": "node",
       "resolvedVersion": "0.1.1",
       "via": "dna-gg",
       "hash": "0xf541b93b3dc7995d"
@@ -95,7 +95,7 @@
       "ecosystem": "pub",
       "resolvedVersion": "1.6.0",
       "via": "dna-ggsuite",
-      "hash": "0xf809b20d01f13cce"
+      "hash": "0x1be177dde62ec3b7"
     },
     {
       "name": "dna-ggsuite",
@@ -117,7 +117,7 @@
       "name": "gg-args",
       "package": "gg_args",
       "ecosystem": "pub",
-      "resolvedVersion": "3.2.0",
+      "resolvedVersion": "3.2.1",
       "via": null,
       "hash": "0x32b3537fa5495175"
     },
@@ -141,7 +141,7 @@
       "name": "gg-git",
       "package": "gg_git",
       "ecosystem": "pub",
-      "resolvedVersion": "4.8.1",
+      "resolvedVersion": "4.9.0",
       "via": null,
       "hash": "0x32b3537fa5495175"
     },
@@ -149,7 +149,7 @@
       "name": "gg-is-flutter",
       "package": "gg_is_flutter",
       "ecosystem": "pub",
-      "resolvedVersion": "2.2.4",
+      "resolvedVersion": "2.2.5",
       "via": "gg-one-core",
       "hash": "0x32b3537fa5495175"
     },
@@ -157,7 +157,7 @@
       "name": "gg-publish",
       "package": "gg_publish",
       "ecosystem": "pub",
-      "resolvedVersion": "4.10.3",
+      "resolvedVersion": "4.10.4",
       "via": "gg-one-core",
       "hash": "0x32b3537fa5495175"
     },
@@ -173,7 +173,7 @@
       "name": "gg-test",
       "package": "gg_test",
       "ecosystem": "pub",
-      "resolvedVersion": "3.3.5",
+      "resolvedVersion": "3.4.0",
       "via": "gg-one-core",
       "hash": "0x32b3537fa5495175"
     },
@@ -189,7 +189,7 @@
       "name": "gg-one-core",
       "package": "gg_one_core",
       "ecosystem": "pub",
-      "resolvedVersion": "2.17.0",
+      "resolvedVersion": "2.19.0",
       "via": null,
       "hash": "0x32b3537fa5495175"
     },
@@ -243,11 +243,11 @@
     },
     {
       "path": ".claude/skills/gg-publish/SKILL.md",
-      "hash": "0x501ac99a5d586b58"
+      "hash": "0x7ea44a57ed7d2ae8"
     },
     {
       "path": ".claude/skills/gg-push/SKILL.md",
-      "hash": "0x140e1b8d6cbe222e"
+      "hash": "0xe9bf8d2d00371cf3"
     },
     {
       "path": ".claude/skills/gg-review-architecture/SKILL.md",
@@ -363,7 +363,7 @@
     },
     {
       "path": "doc/guides/for-ai/ai-dev-guide.md",
-      "hash": "0x66658aeee6353ced"
+      "hash": "0xb3354db9fff082e9"
     },
     {
       "path": "doc/guides/for-ai/ai-review-guide.md",
