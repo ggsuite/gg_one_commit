@@ -162,12 +162,13 @@ packages:
     source: hosted
     version: "0.4.0"
   dna_gg:
-    dependency: "direct overridden"
+    dependency: transitive
     description:
-      path: "../dna_gg"
-      relative: true
-    source: path
-    version: "1.6.0"
+      name: dna_gg
+      sha256: a2f134caeb93fbf66d055670d4d575e13d8ec4e0441fbad870945834554bb2ee
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.6.1"
   dna_ggsuite:
     dependency: "direct dev"
     description:
@@ -371,10 +372,11 @@ packages:
   gg_one_core:
     dependency: "direct main"
     description:
-      path: "../gg_one_core"
-      relative: true
-    source: path
-    version: "2.19.0"
+      name: gg_one_core
+      sha256: "5fade9f261d685c7fb5cfefb66bc1106053863cb3cb53ed1b35e5538ba820774"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.20.0"
   gg_process:
     dependency: "direct main"
     description:
