@@ -2,11 +2,13 @@
 
 ## Unreleased
 
+### Added
+
+- Add the blog post about the majorVersions default
+
 ### Changed
 
 - Document that upgrades cross majors only on request
-
-Tests of do upgrade deps allow majors in their repository file
 
 ## 2.10.0 - 2026-11-12
 
