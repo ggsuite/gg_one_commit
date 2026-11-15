@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.10.1 - 2026-11-15
+
+### Added
+
+- Add the blog post about the majorVersions default
+
+### Changed
+
+- Document that upgrades cross majors only on request
+
 ## 2.10.0 - 2026-11-12
 
 ### Added
