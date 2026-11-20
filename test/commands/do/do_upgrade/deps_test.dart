@@ -122,24 +122,6 @@ void main() {
   }
 
   // ...........................................................................
-  void mockPin({
-    String executable = 'pnpm',
-    List<String>? args,
-    int exitCode = 0,
-    String stderr = '',
-  }) {
-    when(
-      () => processWrapper.run(
-        executable,
-        args ?? ['update', '--save-exact', 'typescript@6'],
-        workingDirectory: d.path,
-        runInShell: true,
-        environment: any(named: 'environment'),
-      ),
-    ).thenAnswer((_) async => ProcessResult(0, exitCode, '', stderr));
-  }
-
-  // ...........................................................................
   void initDefaultMocks() {
     canUpgrade.mockExec(result: null, directory: d, ggLog: ggLog);
     mockDartPubUpgrade();
@@ -576,83 +558,22 @@ void main() {
           );
         });
 
-        test('holds typescript at 6 when the repo declares it', () async {
-          // »pnpm update --latest« crosses every major boundary, and
-          // TypeScript 7 is a breaking rewrite. The pin also brings a repo
-          // that already drifted past it back down.
-          writePackageJson(devDependencies: {'typescript': '~7.0.2'});
-          mockNodeUpgrade();
-          mockPin();
-
-          await doUpgrade.exec(directory: d, ggLog: ggLog);
-
-          final all = messages.join('\n');
-          expect(all, contains('✓ Run »pnpm update --latest«'));
-          expect(
-            all,
-            contains('✓ Run »pnpm update --save-exact typescript@6«'),
-          );
-          // The generic upgrade runs first, the pin corrects it afterwards.
-          expect(
-            all.indexOf('pnpm update --latest«'),
-            lessThan(all.indexOf('--save-exact typescript@6')),
-          );
-        });
-
-        test('does not pin a package the repo never declared', () async {
-          // Installing it would add typescript as a new dependency.
-          writePackageJson(devDependencies: {'prettier': '^3.0.0'});
+        test('moves typescript like every other dependency', () async {
+          // No package is held at a fixed version: with majors allowed,
+          // typescript may cross into a new major like everything else.
+          writePackageJson(devDependencies: {'typescript': '~6.0.3'});
           mockNodeUpgrade();
 
           await doUpgrade.exec(directory: d, ggLog: ggLog);
 
-          expect(messages.join('\n'), isNot(contains('typescript@6')));
+          expect(messages.join('\n'), contains('✓ Run »pnpm update --latest«'));
           verifyNever(
             () => processWrapper.run(
               any(),
-              any(that: contains('typescript@6')),
+              any(that: contains('--save-exact')),
               workingDirectory: any(named: 'workingDirectory'),
               runInShell: any(named: 'runInShell'),
               environment: any(named: 'environment'),
-            ),
-          );
-        });
-
-        test('pins even with --no-major-versions', () async {
-          // The pin states which version the repo must be on; it is not an
-          // upgrade policy.
-          writePackageJson(devDependencies: {'typescript': '~7.0.2'});
-          mockNodeUpgrade(majorVersions: false);
-          mockDartPubUpgrade(majorVersions: false);
-          mockPin();
-
-          await doUpgrade.exec(
-            directory: d,
-            ggLog: ggLog,
-            majorVersions: false,
-          );
-
-          expect(
-            messages.join('\n'),
-            contains('✓ Run »pnpm update --save-exact typescript@6«'),
-          );
-        });
-
-        test('reports a failing pin', () async {
-          writePackageJson(devDependencies: {'typescript': '~7.0.2'});
-          mockNodeUpgrade();
-          mockPin(exitCode: 1, stderr: 'nope');
-
-          await expectLater(
-            doUpgrade.exec(directory: d, ggLog: ggLog),
-            throwsA(
-              isA<Exception>().having(
-                (e) => rmControls(e.toString()),
-                'message',
-                contains(
-                  '»pnpm update --save-exact typescript@6« failed: nope',
-                ),
-              ),
             ),
           );
         });
