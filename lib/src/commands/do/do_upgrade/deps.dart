@@ -197,26 +197,6 @@ class DoUpgradeDeps extends DirCommand<void> {
       command: packageManager.updateCommand(latest: majorVersions),
     );
 
-    // The generic upgrade above crosses every major boundary. Bring the
-    // packages gg holds at a fixed version back down — this also repairs a
-    // repository that already drifted past the pin. Runs regardless of
-    // --major-versions: the pin states which version the repository must be
-    // on, it is not an upgrade policy.
-    final declared = readNpmDependencyNames(directory);
-    for (final entry in pinnedNpmVersions.entries) {
-      // Pinning a package the repository never declared would add it.
-      if (!declared.contains(entry.key)) {
-        continue;
-      }
-      await _runNodeCommand(
-        directory: directory,
-        command: packageManager.pinCommand(
-          package: entry.key,
-          version: entry.value,
-        ),
-      );
-    }
-
     _restoreLocalizedSpecs(file: manifestFile, before: manifestBefore);
 
     if (workspaceBefore != null &&

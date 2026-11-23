@@ -1,10 +1,11 @@
 # Changelog
 
-## Unreleased
+## 2.11.0 - 2026-11-23
 
 ### Changed
 
 - Upgrade the SDK, the dependencies and the DNA
+- Let typescript move like every other dependency
 
 ## 2.10.1 - 2026-11-15
 
