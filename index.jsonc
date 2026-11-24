@@ -13,7 +13,7 @@
 
   // 1-3 bullet points: the problem space.
   "domain": [
-    "can/do/did commit, push, upgrade; do create ticket; ocean folder guard",
+    "can/do/did commit, push, upgrade; do create ticket; ocean folder guard; can commit places the DNA check",
     "gg do commit without -m: commit and merge message on one sheet in the editor; --no-interactive",
     "CHANGELOG entry per commit",
   ],
@@ -34,7 +34,7 @@
       "gg_console_colors": "colored output",
       "gg_log": "GgLog",
       "dna_ggsuite": "dev: DNA layer: guides, templates",
-      "helix": "dev: runDnaTest",
+      "helix": "placeDnaCheck for can commit (ensure-dna-check); dev: the placed DNA check",
     },
 
     // "<repo-b>": "why / API"

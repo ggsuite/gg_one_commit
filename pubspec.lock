@@ -426,7 +426,7 @@ packages:
     source: hosted
     version: "2.2.0"
   helix:
-    dependency: "direct dev"
+    dependency: "direct main"
     description:
       path: "../helix"
       relative: true

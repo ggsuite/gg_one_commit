@@ -6,6 +6,8 @@
 
 import 'package:gg_one_core/gg_one_core.dart';
 
+import 'ensure_dna_check.dart';
+
 import 'dart:io';
 
 import 'package:gg_args/gg_args.dart';
@@ -19,20 +21,27 @@ class CanCommit extends CommandCluster {
   CanCommit({
     required super.ggLog,
     Checks? checks,
+    EnsureDnaCheck? ensureDnaCheck,
     super.name = 'commit',
     super.description = 'Check if this repo can be committed',
     super.shortDescription = 'Can commit?',
     super.stateKey = 'canCommit',
   }) : super(
          checksSetting: GgRc.commitChecks,
-         commands: _checks(checks, ggLog),
+         commands: _checks(checks, ensureDnaCheck, ggLog),
        );
 
   // ...........................................................................
-  static List<DirCommand<void>> _checks(Checks? checks, GgLog ggLog) {
+  static List<DirCommand<void>> _checks(
+    Checks? checks,
+    EnsureDnaCheck? ensureDnaCheck,
+    GgLog ggLog,
+  ) {
     checks ??= Checks(ggLog: ggLog);
 
     return [
+      // Before the tests: they run the DNA check it places.
+      ensureDnaCheck ?? EnsureDnaCheck(ggLog: ggLog),
       checks.pubGetOffline,
       checks.analyze,
       checks.format,

@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Place the DNA check before every commit
+
+can commit runs ensure-dna-check first: it places the check helix provides in a repository with a DNA
+Warn when a repository has a DNA but does not declare helix or helix-js
+
 ## 2.11.0 - 2026-11-23
 
 ### Changed
