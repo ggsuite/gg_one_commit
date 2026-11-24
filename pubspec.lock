@@ -428,10 +428,11 @@ packages:
   helix:
     dependency: "direct main"
     description:
-      path: "../helix"
-      relative: true
-    source: path
-    version: "1.15.2"
+      name: helix
+      sha256: "5c7cb8451df335b786a5e2e7059a43be68e50132419b7c62ed6628ec98f17d2b"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.16.0"
   http:
     dependency: transitive
     description:
