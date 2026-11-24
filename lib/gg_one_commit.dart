@@ -8,6 +8,7 @@ library;
 
 export 'src/commands/can/can_checkout.dart';
 export 'src/commands/can/can_commit.dart';
+export 'src/commands/can/ensure_dna_check.dart';
 export 'src/commands/can/can_push.dart';
 export 'src/commands/can/can_upgrade.dart';
 export 'src/commands/did/did_commit.dart';

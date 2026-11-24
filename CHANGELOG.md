@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.12.0 - 2026-11-24
+
+### Changed
+
+- Place the DNA check before every commit
+
+### Removed
+
+- Commit the placed DNA check and name what it lacks
+
 ## 2.11.0 - 2026-11-23
 
 ### Changed
