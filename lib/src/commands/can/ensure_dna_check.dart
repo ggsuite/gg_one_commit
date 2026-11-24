@@ -10,14 +10,7 @@ import 'package:gg_args/gg_args.dart';
 import 'package:gg_console_colors/gg_console_colors.dart';
 import 'package:gg_log/gg_log.dart';
 import 'package:helix/helix.dart'
-    show
-        DnaHost,
-        IoDnaHost,
-        dartDnaCheckPath,
-        dnaConfigPath,
-        placeDnaCheck,
-        tsDnaCheckPath;
-import 'package:mocktail/mocktail.dart' as mocktail;
+    show DnaHost, IoDnaHost, dnaConfigPath, placeDnaCheck;
 import 'package:path/path.dart' as p;
 
 // #############################################################################
@@ -28,9 +21,11 @@ import 'package:path/path.dart' as p;
 /// Runs only in a repository with a DNA (`dna/_dna.json`). There it places
 /// the check helix provides — `test/dna/dna_test.dart` or
 /// `test/dna/dna.spec.ts` — or replaces an older one, and removes a check
-/// that no longer fits. The check needs the engine as a dependency (`helix`,
-/// or `@tssuite/helix-js`); without it, nothing is placed and a warning
-/// says that the DNA is not checked.
+/// that no longer fits. The change is committed right away as
+/// [commitMessage], like every file the DNA generates, so a commit of an
+/// otherwise clean repository does not leave it behind. The check needs the
+/// engine and a test framework as dependencies; without them nothing is
+/// placed, and a warning names the dependency to declare.
 class EnsureDnaCheck extends DirCommand<void> {
   /// Constructor.
   EnsureDnaCheck({required super.ggLog, DnaHost? host})
@@ -45,10 +40,13 @@ class EnsureDnaCheck extends DirCommand<void> {
 
   final DnaHost _host;
 
-  /// Warning for a repository with a DNA but without the engine.
-  static const String noEngineWarning =
-      'The DNA is not checked: declare helix (Dart) or @tssuite/helix-js '
-      '(TypeScript) as dev dependency.';
+  /// Message of the commit that carries the placed or removed check.
+  static const String commitMessage = '#gg: DNA check';
+
+  /// Warning for a repository with a DNA but without a check: [package] is
+  /// the dependency to declare.
+  static String notCheckedWarning(String package) =>
+      'The DNA is not checked: declare $package as dev dependency.';
 
   // ...........................................................................
   @override
@@ -63,14 +61,21 @@ class EnsureDnaCheck extends DirCommand<void> {
     for (final path in result.removed) {
       ggLog(cDetail('✓ Removed DNA check $path'));
     }
+    final changed = [...result.placed, ...result.removed];
+    if (changed.isNotEmpty) {
+      try {
+        await _host.commitPaths(root, changed, commitMessage);
+      } on Object catch (e) {
+        ggLog(yellow('Could not commit the DNA check ($e) — commit it.'));
+      }
+    }
 
-    final hasCheck =
-        _host.existsFile('$root/$dartDnaCheckPath') ||
-        _host.existsFile('$root/$tsDnaCheckPath');
-    if (!hasCheck) ggLog(yellow(noEngineWarning));
+    final missing = result.missing;
+    if (missing != null) ggLog(yellow(notCheckedWarning(missing)));
   }
 }
 
 // .............................................................................
 /// A mocktail mock.
-class MockEnsureDnaCheck extends mocktail.Mock implements EnsureDnaCheck {}
+class MockEnsureDnaCheck extends MockDirCommand<void>
+    implements EnsureDnaCheck {}
