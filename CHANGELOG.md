@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.12.0 - 2026-11-24
 
 ### Changed
 
@@ -9,9 +9,6 @@
 ### Removed
 
 - Commit the placed DNA check and name what it lacks
-
-can commit commits a placed or removed check as #gg: DNA check
-The warning names the missing dependency: helix, helix-js, test or vitest
 
 ## 2.11.0 - 2026-11-23
 
